@@ -10,9 +10,42 @@ struct RegistroLocacao {
     char NumeroDias[5];    // +1 para o caractere nulo ('\0')
 };
 
-// Função para inserção de um registro no final do arquivo TODO: verificar tamanho disponivel antes de inserir
-void inserirRegistro() {
+struct RegistroLocacao registros[100];  // TODO: Mudar para dentro da função, retornando do carrega arquivo
 
+// Função para inserção de um registro no final do arquivo TODO: verificar tamanho disponivel antes de inserir
+void inserirRegistro(struct RegistroLocacao registroInserir) {
+
+    FILE *arquivo = fopen("registro.bin", "a+b");
+    char tamanho, ponteiro;
+
+    if (arquivo == NULL) {
+        perror("Erro ao abrir o arquivo");
+        return;
+    }
+    int teste = -1;
+    fwrite(&teste, 1, sizeof(int), arquivo);
+
+    tamanho = 18 + strlen(registroInserir.NomeCliente) + strlen(registroInserir.NomeVeiculo) + 4;
+
+    fread(&ponteiro, sizeof(int), 1, arquivo);
+    if(ponteiro == -1){
+        arquivo = fopen("registro.bin", "a+b");
+    }
+    else{
+        fread(&ponteiro, sizeof(char), 1, arquivo);
+    }
+
+    fwrite(&tamanho, 1, sizeof(char), arquivo);
+    fwrite(registroInserir.CodCli, 1, strlen(registroInserir.CodCli), arquivo);
+    fwrite("|", 1, sizeof(char), arquivo);
+    fwrite(registroInserir.CodVei, 1, strlen(registroInserir.CodVei), arquivo);
+    fwrite("|", 1, sizeof(char), arquivo);
+    fwrite(registroInserir.NomeCliente, 1, strlen(registroInserir.NomeCliente), arquivo);
+    fwrite("|", 1, sizeof(char), arquivo);
+    fwrite(registroInserir.NomeVeiculo, 1, strlen(registroInserir.NomeVeiculo), arquivo);
+    fwrite("|", 1, sizeof(char), arquivo);
+    fwrite(registroInserir.NumeroDias, 1, sizeof (int), arquivo);
+    fwrite("|", 1, sizeof(char), arquivo);
 }
 
 // Função para remover os registros TODO: precisamos remover o registro baseado na chave primaria (CodCli + CodVei)
@@ -34,7 +67,6 @@ void carregarArquivo() {
         return;
     }
 
-    struct RegistroLocacao registros[100];
     int numRegistros = 0;
 
     while (fread(&registros[numRegistros], sizeof(struct RegistroLocacao), 1, arquivo) == 1) {
@@ -53,7 +85,7 @@ void menu(FILE *file){
 
         switch (resposta) {
             case 1:
-                inserirRegistro();
+                inserirRegistro(registros[1]);  // Usando um registro de exemplo para testar, mudar depois
                 break;
             case 2:
                 removerRegistro();
