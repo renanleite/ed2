@@ -3,11 +3,11 @@
 
 // Definição da estrutura de dados
 struct RegistroLocacao {
-    char CodCli[12];
-    char CodVei[8];
-    char NomeCliente[51];
-    char NomeVeiculo[51];
-    int NumeroDias;
+    char CodCli[12];  // +1 para o caractere nulo ('\0')
+    char CodVei[8];   // +1 para o caractere nulo ('\0')
+    char NomeCliente[50];  // +1 para o caractere nulo ('\0')
+    char NomeVeiculo[50];  // +1 para o caractere nulo ('\0')
+    char NumeroDias[5];    // +1 para o caractere nulo ('\0')
 };
 
 // Função para inserção de um registro no final do arquivo TODO: verificar tamanho disponivel antes de inserir
@@ -31,40 +31,15 @@ void carregarArquivo() {
 
     if (arquivo == NULL) {
         perror("Erro ao abrir o arquivo");
+        return;
     }
 
     struct RegistroLocacao registros[100];
     int numRegistros = 0;
 
-    while (!feof(arquivo)) {
-        char tamanhoRegistro;
-        if (fread(&tamanhoRegistro, sizeof(unsigned char), 1, arquivo) != 1) {
-            break; // Fim do arquivo
-        }
-
-        char linha[256];
-        if (fgets(linha, tamanhoRegistro + 1, arquivo) == NULL) {
-            break; // Fim do arquivo ou erro
-        }
-
-        linha[strcspn(linha, "\n")] = '\0'; // TODO: verificar se pode tirar essa linha
-
-        if (strlen(linha) != tamanhoRegistro) {
-            // TODO: Dados inconsistentes, talvez tratar erro
-            continue;
-        }
-
-        // Armazena o valor do registro no vetor de structs
-        sscanf(linha, "%11[^|]|%7[^|]|%49[^|]|%49[^|]|%d|",
-               registros[numRegistros].CodCli,
-               registros[numRegistros].CodVei,
-               registros[numRegistros].NomeCliente,
-               registros[numRegistros].NomeVeiculo,
-               &registros[numRegistros].NumeroDias);
-
+    while (fread(&registros[numRegistros], sizeof(struct RegistroLocacao), 1, arquivo) == 1) {
         numRegistros++;
     }
-
     fclose(arquivo);
 }
 
