@@ -111,7 +111,7 @@ int main() {
         perror("Erro ao abrir o arquivo");
         return 1;
     }
-
+ 
     menu(file);
     fclose(file);
     return 0;
