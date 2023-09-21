@@ -99,18 +99,20 @@ void removerRegistro(char CodVei[], char CodCli[]) {
         fseek(arquivo, 1, SEEK_CUR);
         fread(&CodVeiRegistro, sizeof(char), 12, arquivo);
 
-        if((CodVei != CodVeiRegistro) && (CodCli != CodCliRegistro)){
-            fseek(arquivo, tamanhoRegistro - 21, SEEK_CUR);
+        if((CodVei != CodVeiRegistro) && (CodCli != CodCliRegistro)){ //Verifica se encontrou o registro a ser removido
+
+            fseek(arquivo, tamanhoRegistro - 21, SEEK_CUR); //Pula para o proximo registro
+
         }
         else{
             RegistroEncontrado = true;
+            fseek(arquivo, -21, SEEK_CUR);
             break;
         }
     }
 
-    if(RegistroEncontrado){
+    if(RegistroEncontrado){  //Remove o registro
 
-        fseek(arquivo, -21, SEEK_CUR);
         offset = ftell(arquivo) - 1;
         offset = adicionaOffset(offset);
         
