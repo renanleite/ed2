@@ -30,8 +30,8 @@ void criaArquivo(){
         return;
     }
     else{
-        arquivo = fopen("registro.bin", "w+b");
-        fwrite(&offsetVazio, 1, sizeof(int), arquivo);
+        arquivo = fopen("registro.bin", "wb");
+        fwrite(&offsetVazio, sizeof(int), 1, arquivo);
         fclose(arquivo);
     }
 }
@@ -230,6 +230,7 @@ void menu(){
                 printf("Qual o registro deseja inserir?\n");
                 scanf("%d", &posicao);
                 inserirRegistro(registros[posicao]);
+                break;
             case 2:
                 printf("Qual o registro deseja remover?\n");
                 scanf("%d", &posicao);
