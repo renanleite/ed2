@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
+#include <stdlib.h>
 
 // Definição da estrutura de dados
 
@@ -14,13 +15,12 @@ struct RegistroLocacao {
     char CodVei[8];   // +1 para o caractere nulo ('\0')
     char NomeCliente[50];  // +1 para o caractere nulo ('\0')
     char NomeVeiculo[50];  // +1 para o caractere nulo ('\0')
-    char NumeroDias[4];    // +1 para o caractere nulo ('\0')
+    char NumeroDias[4];
 };
 
 struct RegistroLocacao registros[100];  // TODO: Mudar para dentro da função, retornando do carrega arquivo
 struct RegistroArquivoRemove registrosRemover[100]; //Verificar se vai fazer Array tamanho fixo ou Malloc
 
-int totalRegistrosCarregados;
 
 //Função para verificar se o arquivo existe e caso não, ele irá criar e inicializar com -1, indicando que não há espaços vazios no arquivo
 void criaArquivo(){
@@ -38,11 +38,40 @@ void criaArquivo(){
     }
 }
 
-// Função para inserção de um registro no final do arquivo 
-// TODO: verificar tamanho disponivel antes de inserir
+//Busca um espaço para inserção de registro e atualiza a "pilha" de Offsets
+int buscaEspaco(char tamanho){
+
+    FILE *arquivo = fopen("registro.bin", "rb+");
+    int offset, offsetAnterior;
+    char espacoLivre = 0;
+
+    fread(&offset, sizeof(int), 1, arquivo);
+    while((offset != -1) && (espacoLivre < tamanho)){
+        offsetAnterior = offset;
+
+        fseek(arquivo, offset, SEEK_SET);
+        fread(&espacoLivre, sizeof(char), 1, arquivo);
+        fseek(arquivo, 1, SEEK_CUR);
+        fread(&offset, sizeof(int), 1, arquivo);
+    }
+
+    if(offset == -1){
+        return -1;
+    }
+    else{
+        //Atualiza o offset do começo
+        rewind(arquivo);
+        fwrite(&offsetAnterior, sizeof(int), 1, arquivo);
+        return offsetAnterior;
+    }
+
+
+}
+
+// Função para inserção de um registro no final do arquivo
 void inserirRegistro(struct RegistroLocacao registroInserir) {
     
-    FILE *arquivo = fopen("registro.bin", "a+b");
+    FILE *arquivo = fopen("registro.bin", "rb+");
     char tamanhoDoRegistro;
     int offset;
     int sizeCodCliCodVei = 18; 
@@ -53,20 +82,20 @@ void inserirRegistro(struct RegistroLocacao registroInserir) {
     }
 
     tamanhoDoRegistro = 
-        sizeCodCliCodVei + strlen(registroInserir.NomeCliente) + strlen(registroInserir.NomeVeiculo) + sizeof(int);
+        sizeCodCliCodVei + strlen(registroInserir.NomeCliente) + strlen(registroInserir.NomeVeiculo) + sizeof(int) + 5;
 
     fread(&offset, sizeof(char), 1, arquivo);
 
     //Verifica se irá inserir no final ou no meio, caso seja no final ele insere o tamanho do registro
     if(offset == -1){
         arquivo = fopen("registro.bin", "a+b");
-        fwrite(&tamanhoDoRegistro, 1, sizeof(char), arquivo);
+        fwrite(&tamanhoDoRegistro, sizeof(char), 1, arquivo);
     }
     else{
-        offset = (tamanhoDoRegistro);
+        offset = buscaEspaco(tamanhoDoRegistro);
         if(offset == -1){
             arquivo = fopen("registro.bin", "a+b");
-            fwrite(&tamanhoDoRegistro, 1, sizeof(char), arquivo);
+            fwrite(&tamanhoDoRegistro, sizeof(char), 1, arquivo);
         }
         else{
             fseek(arquivo, offset, SEEK_SET);
@@ -89,6 +118,23 @@ void inserirRegistro(struct RegistroLocacao registroInserir) {
     printf("\n---Registro Inserido com sucesso---\n\n");
 }
 
+//Adiciona um novo Offset a "pilha"
+int adicionaOffset(int posicaoRemovido){
+    FILE *arquivo = fopen("registro.bin", "rb+");
+    int offset = 0, offsetAnterior = -1;
+
+    fread(&offset, sizeof(int), 1, arquivo);
+    while(offset != -1){
+        offsetAnterior = offset;
+        fseek(arquivo, offset + 2, SEEK_SET); //Anda o tamanho +1 do tamanho +1 do *
+        fread(&offset, sizeof(int), 1, arquivo);
+    }
+
+    rewind(arquivo);
+    fwrite(&posicaoRemovido, sizeof(int), 1, arquivo);
+    return offsetAnterior;
+}
+
 // Função para remover os registros TODO: precisamos remover o registro baseado na chave primaria (CodCli + CodVei)
 void removerRegistro(char CodVei[], char CodCli[]) {
     FILE *arquivo = fopen("registro.bin", "rb+");
@@ -100,36 +146,32 @@ void removerRegistro(char CodVei[], char CodCli[]) {
     fread(&offset, sizeof(int), 1, arquivo); //Lendo o offset inicial
     while(fread(&tamanhoRegistro, sizeof(char), 1, arquivo)){
         
-        fread(&CodCliRegistro, sizeof(char), 8, arquivo);
+        fread(&CodCliRegistro, sizeof(char), 11, arquivo);
         fseek(arquivo, 1, SEEK_CUR);
-        fread(&CodVeiRegistro, sizeof(char), 12, arquivo);
+        fread(&CodVeiRegistro, sizeof(char), 7, arquivo);
 
-        if((CodVei != CodVeiRegistro) && (CodCli != CodCliRegistro)){ //Verifica se encontrou o registro a ser removido
-
-            fseek(arquivo, tamanhoRegistro - 21, SEEK_CUR); //Pula para o proximo registro
-
-        }
-        else{
+        if (strcmp(CodVei, CodVeiRegistro) != 0 && strcmp(CodCli, CodCliRegistro) != 0) {
+            fseek(arquivo, tamanhoRegistro - 19, SEEK_CUR); // Pular para o próximo registro
+        } else {
             RegistroEncontrado = true;
-            fseek(arquivo, -21, SEEK_CUR);
+            offset = (int)ftell(arquivo) - 19; // Calcular o offset
             break;
         }
     }
 
     if(RegistroEncontrado){  //Remove o registro
 
-        offset = ftell(arquivo) - 1;
+        fseek(arquivo, offset, SEEK_SET);
         offset = adicionaOffset(offset);
         
         fwrite("*", sizeof(char), 1, arquivo);
-        fwrite(offset, sizeof(int), 1, arquivo);
+        fwrite(&offset, sizeof(int), 1, arquivo);
         printf("\n---Registro Removido com sucesso---\n\n");
-        
     }
     else{
         printf("\n---Registro Não Encontrado---\n\n");
     }
-
+    fclose(arquivo);
 }
 
 // Função para compactar o arquivo
@@ -156,7 +198,7 @@ void compactarArquivo() {
 
                 if(contadorPartes == quantidadeDados){ //Verifica se o registro terminou para poder inserir, independente do tamanho descrito no original
                     tamanho = i;
-                    fwrite(tamanho, sizeof(char), 1, arquivoCompactado);
+                    fwrite(&tamanho, sizeof(char), 1, arquivoCompactado);
                     fwrite(buffer, sizeof(char), tamanho, arquivoCompactado);
                     contadorPartes = 0;
                     break;
@@ -192,8 +234,6 @@ void carregarArquivo() {
     }
     fclose(arquivo);
 
-    totalRegistrosCarregados = quantidadeRegistros;
-
     //Fazendo para Remove.bin
     arquivo = fopen("remove.bin", "rb");
     quantidadeRegistros = 0;
@@ -220,57 +260,11 @@ void lerArquivo() {
     fclose(arquivo);
 }
 
-//Adiciona um novo Offset a "pilha"
-int adicionaOffset(int posicaoRemovido){
-    FILE *arquivo = fopen("registro.bin", "rb+");
-    int offset = 0, offsetAnterior;
-
-    while(offset != -1){
-        offsetAnterior = offset;
-        fseek(arquivo, offset + 2, SEEK_SET); //Anda o tamanho +1 do tamanho +1 do *
-        fread(&offset, sizeof(int), 1, arquivo);
-    }
-
-    rewind(arquivo);
-    fwrite(posicaoRemovido, sizeof(int), 1, arquivo);
-    return offsetAnterior;
-}
- 
-//Busca um espaço para inserção de registro e atualiza a "pilha" de Offsets
-int buscaEspaco(char tamanho){
-    
-    FILE *arquivo = fopen("registro.bin", "rb+");
-    int offset = 0, offsetAnterior;
-    char espacoLivre = 0;
-
-    while((offset != -1) && (espacoLivre < tamanho)){
-        offsetAnterior = offset;
-
-        fseek(arquivo, offset, SEEK_SET);
-        fread(espacoLivre, sizeof(char), 1, arquivo);
-        fseek(arquivo, 1, SEEK_CUR);
-        fread(&offset, sizeof(int), 1, arquivo);
-
-    }
-
-    if(offset == -1){
-        return -1;
-    }
-    else{
-        //Atualiza o offset do começo
-        rewind(arquivo);
-        fwrite(offsetAnterior, sizeof(int), 1, arquivo);
-        return offsetAnterior;
-    }
-
-
-}
-
 int imprimirMenu() {
     int resposta;
 
     printf("Escolha uma opção:\n");
-    printf("(1)Inserir\n(2)Remover\n(3)Compactar\n(4)Carregar Arquivos\n(5)Sair\n");
+    printf("(1)Inserir\n(2)Remover\n(3)Compactar\n(4)Carregar Arquivos\n(5)Ler Arquivo\n(6)Sair\n");
     scanf("%d", &resposta);
 
     return resposta;
@@ -290,12 +284,7 @@ void menu(){
                 printf("Qual o registro deseja inserir?\n");
                 scanf("%d", &posicao);
 
-                if(posicao < totalRegistrosCarregados){
-                    inserirRegistro(registros[posicao]);
-                }
-                else{
-                    printf("\n---Valor Inválido de registro---\n\n");
-                }
+                inserirRegistro(registros[posicao]);
                 break;
             case 2:
                 system("clear");
@@ -312,6 +301,9 @@ void menu(){
                 carregarArquivo();
                 break;
             case 5:
+                lerArquivo();
+                break;
+            case 6:
                 system("clear");
 
                 printf("\n---Finalizando o programa!!!---\n\n");
@@ -322,7 +314,7 @@ void menu(){
                 printf("\n---Valor Inválido---\n\n");
         }
     }
-    while(resposta != 5);
+    while(resposta != 6);
 }
 
 // Função main
