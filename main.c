@@ -24,14 +24,15 @@ struct RegistroArquivoRemove remover[100]; //Verificar se vai fazer Array tamanh
 //Função para verificar se o arquivo existe e caso não, ele irá criar e inicializar com -1, indicando que não há espaços vazios no arquivo
 void criaArquivo(){
     FILE *arquivo;
-    int offsetVazio = -1;
+    int offsetVazio[] = {-1}; 
+
     if(arquivo = fopen("registro.bin", "rb")){
         fclose(arquivo);
         return;
     }
     else{
-        arquivo = fopen("registro.bin", "wb");
-        fwrite(&offsetVazio, sizeof(int), 1, arquivo);
+        arquivo = fopen("registro.bin", "w+b");
+        fwrite(offsetVazio, 1, sizeof(int), arquivo);
         fclose(arquivo);
     }
 }
@@ -126,6 +127,9 @@ void removerRegistro(char CodVei[], char CodCli[]) {
 // Função para compactar o arquivo
 void compactarArquivo() {
 
+    FILE *arquivo = fopen("registro.bin", "rb");
+    FILE *arquivoCompactado = fopen("novo.bin", "w+b");
+
 }
 
 // Vai abrir o arquivo insere.bin e carregar todos os registros em um vetor de structs
@@ -215,23 +219,35 @@ int buscaEspaco(char tamanho){
 
 
 }
+
+int imprimirMenu() {
+    int resposta;
+
+    printf("Escolha uma opção:\n");
+    printf("(1)Inserir\n(2)Remover\n(3)Compactar\n(4)Carregar Arquivos\n(5)Ler Arquivo\n(6)Sair\n");
+    scanf("%d", &resposta);
+
+    return resposta;
+}
+
 // Função para administrar o menu
 void menu(){
     int resposta, posicao;
 
     do{
-        printf("Escolha uma opção:\n");
-        printf("(1)Inserir\n(2)Remover\n(3)Compactar\n(4)Carregar Arquivos\n(5)Ler Arquivo\n(6)Sair\n");
-        scanf("%d", &resposta);
+        resposta = imprimirMenu();
 
         switch (resposta) {
             case 1:
-                //system("clear");
+                system("clear");
+
                 printf("Qual o registro deseja inserir?\n");
                 scanf("%d", &posicao);
                 inserirRegistro(registros[posicao]);
                 break;
             case 2:
+                system("clear");
+
                 printf("Qual o registro deseja remover?\n");
                 scanf("%d", &posicao);
                 removerRegistro(remover[posicao].cod_vei, remover[posicao].cod_cli);
@@ -246,9 +262,14 @@ void menu(){
                 lerArquivo();
                 break;
             case 6:
-            break;
+                system("clear");
+
+                printf("\n---Finalizando o programa!!!---\n\n");
+                break;
             default:
-                printf("Valor inválido!\n");
+                system("clear");
+
+                printf("\n---Valor Inválido---\n\n");
         }
     }
     while(resposta != 6);
