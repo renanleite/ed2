@@ -53,22 +53,23 @@ void inserirRegistro(struct RegistroLocacao registroInserir) {
         sizeCodCliCodVei + strlen(registroInserir.NomeCliente) + strlen(registroInserir.NomeVeiculo) + sizeof(int);
 
     fread(&offset, sizeof(char), 1, arquivo);
+
+    //Verifica se irá inserir no final ou no meio, caso seja no final ele insere o tamanho do registro
     if(offset == -1){
         arquivo = fopen("registro.bin", "a+b");
+        fwrite(&tamanhoDoRegistro, 1, sizeof(char), arquivo);
     }
     else{
         offset = (tamanhoDoRegistro);
         if(offset == -1){
             arquivo = fopen("registro.bin", "a+b");
+            fwrite(&tamanhoDoRegistro, 1, sizeof(char), arquivo);
         }
         else{
             fseek(arquivo, offset, SEEK_SET);
         }
     }
 
-    printf("\nTamanho Registro: %d\n", tamanhoDoRegistro);
-
-    fwrite(&tamanhoDoRegistro, 1, sizeof(char), arquivo);
     fwrite(registroInserir.CodCli, 1, strlen(registroInserir.CodCli), arquivo);
     fwrite("|", 1, sizeof(char), arquivo);
     fwrite(registroInserir.CodVei, 1, strlen(registroInserir.CodVei), arquivo);
@@ -129,6 +130,42 @@ void compactarArquivo() {
 
     FILE *arquivo = fopen("registro.bin", "rb");
     FILE *arquivoCompactado = fopen("novo.bin", "w+b");
+
+    int offset, contadorPartes, quantidadeDados = 5;
+    char tamanho, buffer[sizeof(struct RegistroLocacao)];
+
+    fread(&offset, sizeof(char), 1, arquivo);
+
+    while(fread(&tamanho, sizeof(char), 1, arquivo)){
+        fread(buffer, sizeof(char), tamanho, arquivo);
+        
+        if(buffer[0] != '*'){ //Se o registro não foi removido entra no laço
+
+            for (int i = 0; i < tamanho; i++){
+
+                if(buffer[i] == '|'){
+                    contadorPartes++;
+                }
+
+                if(contadorPartes == quantidadeDados){ //Verifica se o registro terminou para poder inserir, independente do tamanho descrito no original
+                    tamanho = i;
+                    fwrite(tamanho, sizeof(char), 1, arquivoCompactado);
+                    fwrite(buffer, sizeof(char), tamanho, arquivoCompactado);
+                    contadorPartes = 0;
+                    break;
+                }
+
+            }
+
+        }
+
+    }
+
+    //Deleta o arquivo fragmentado e substitui pelo novo
+    fclose(arquivo);
+    fclose(arquivoCompactado);
+    remove("registro.bin");
+    rename("novo.bin", "registro.bin");
 
 }
 
