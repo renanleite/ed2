@@ -21,16 +21,17 @@ struct RegistroLocacao registros[100];  // TODO: Mudar para dentro da função, 
 struct RegistroArquivoRemove remover[100]; //Verificar se vai fazer Array tamanho fixo ou Malloc
 
 
-//Função para verificar se o aqruivo existe e caso não, ele irá criar e inicializar com -1, indicando que não há espaços vazios no arquivo
+//Função para verificar se o arquivo existe e caso não, ele irá criar e inicializar com -1, indicando que não há espaços vazios no arquivo
 void criaArquivo(){
     FILE *arquivo;
+    int offsetVazio = -1;
     if(arquivo = fopen("registro.bin", "rb")){
         fclose(arquivo);
         return;
     }
     else{
         arquivo = fopen("registro.bin", "w+b");
-        fwrite("-1", 1, sizeof(char), arquivo);
+        fwrite(&offsetVazio, 1, sizeof(int), arquivo);
         fclose(arquivo);
     }
 }
@@ -38,22 +39,24 @@ void criaArquivo(){
 // Função para inserção de um registro no final do arquivo TODO: verificar tamanho disponivel antes de inserir
 void inserirRegistro(struct RegistroLocacao registroInserir) {
 
-    FILE *arquivo = fopen("registro.bin", "rb+");
-    char tamanho, offset;
+    FILE *arquivo = fopen("registro.bin", "a+b");
+    char tamanhoDoRegistro, offset;
+    int sizeCodCliCodVei = 18; 
 
     if (arquivo == NULL) {
         perror("Erro ao abrir o arquivo");
         return;
     }
 
-    tamanho = 18 + strlen(registroInserir.NomeCliente) + strlen(registroInserir.NomeVeiculo) + 4;
+    tamanhoDoRegistro = 
+        sizeCodCliCodVei + strlen(registroInserir.NomeCliente) + strlen(registroInserir.NomeVeiculo) + sizeof(int);
 
     fread(&offset, sizeof(char), 1, arquivo);
     if(offset == -1){
         arquivo = fopen("registro.bin", "a+b");
     }
     else{
-        offset = (tamanho);
+        offset = (tamanhoDoRegistro);
         if(offset == -1){
             arquivo = fopen("registro.bin", "a+b");
         }
@@ -62,7 +65,9 @@ void inserirRegistro(struct RegistroLocacao registroInserir) {
         }
     }
 
-    fwrite(&tamanho, 1, sizeof(char), arquivo);
+    printf("\nTamanho Registro: %d\n", tamanhoDoRegistro);
+
+    fwrite(&tamanhoDoRegistro, 1, sizeof(char), arquivo);
     fwrite(registroInserir.CodCli, 1, strlen(registroInserir.CodCli), arquivo);
     fwrite("|", 1, sizeof(char), arquivo);
     fwrite(registroInserir.CodVei, 1, strlen(registroInserir.CodVei), arquivo);
@@ -179,21 +184,20 @@ int adicionaOffset(int posicaoRemovido){
     rewind(arquivo);
     fwrite(posicaoRemovido, sizeof(int), 1, arquivo);
     return offsetAnterior;
-
 }
  
 //Busca um espaço para inserção de registro e atualiza a "pilha" de Offsets
-int buscaEspaço(char tamanho){
+int buscaEspaco(char tamanho){
     
     FILE *arquivo = fopen("registro.bin", "rb+");
     int offset = 0, offsetAnterior;
-    char espaçoLivre = 0;
+    char espacoLivre = 0;
 
-    while((offset != -1) && (espaçoLivre < tamanho)){
+    while((offset != -1) && (espacoLivre < tamanho)){
         offsetAnterior = offset;
 
         fseek(arquivo, offset, SEEK_SET);
-        fread(espaçoLivre, sizeof(char), 1, arquivo);
+        fread(espacoLivre, sizeof(char), 1, arquivo);
         fseek(arquivo, 1, SEEK_CUR);
         fread(&offset, sizeof(int), 1, arquivo);
 
@@ -251,7 +255,6 @@ void menu(){
 
 // Função main
 int main() {
- 
     criaArquivo();
     menu();
     return 0;
