@@ -14,11 +14,11 @@ struct RegistroLocacao {
     char CodVei[8];   // +1 para o caractere nulo ('\0')
     char NomeCliente[50];  // +1 para o caractere nulo ('\0')
     char NomeVeiculo[50];  // +1 para o caractere nulo ('\0')
-    char NumeroDias[5];    // +1 para o caractere nulo ('\0')
+    char NumeroDias[4];    // +1 para o caractere nulo ('\0')
 };
 
 struct RegistroLocacao registros[100];  // TODO: Mudar para dentro da função, retornando do carrega arquivo
-struct RegistroArquivoRemove remover[100]; //Verificar se vai fazer Array tamanho fixo ou Malloc
+struct RegistroArquivoRemove registrosRemover[100]; //Verificar se vai fazer Array tamanho fixo ou Malloc
 
 
 //Função para verificar se o arquivo existe e caso não, ele irá criar e inicializar com -1, indicando que não há espaços vazios no arquivo
@@ -40,8 +40,11 @@ void criaArquivo(){
 // Função para inserção de um registro no final do arquivo TODO: verificar tamanho disponivel antes de inserir
 void inserirRegistro(struct RegistroLocacao registroInserir) {
 
+    //TODO: TRATAR CASO NÃO EXISTA O REGISTRO INSERIDO DA POSIÇÃO
+    
     FILE *arquivo = fopen("registro.bin", "a+b");
-    char tamanhoDoRegistro, offset;
+    char tamanhoDoRegistro;
+    int offset;
     int sizeCodCliCodVei = 18; 
 
     if (arquivo == NULL) {
@@ -80,6 +83,8 @@ void inserirRegistro(struct RegistroLocacao registroInserir) {
     fwrite("|", 1, sizeof(char), arquivo);
     fwrite(registroInserir.NumeroDias, 1, sizeof (int), arquivo);
     fwrite("|", 1, sizeof(char), arquivo);
+
+    fclose(arquivo);
 
     printf("\n---Registro Inserido com sucesso---\n\n");
 }
@@ -196,7 +201,7 @@ void carregarArquivo() {
         return;
     }
 
-    while(fread(&remover[quantidadeRegistros], sizeof(struct RegistroArquivoRemove), 1, arquivo)){
+    while(fread(&registrosRemover[quantidadeRegistros], sizeof(struct RegistroArquivoRemove), 1, arquivo)){
         quantidadeRegistros++;
     }
     fclose(arquivo);
@@ -282,6 +287,7 @@ void menu(){
 
                 printf("Qual o registro deseja inserir?\n");
                 scanf("%d", &posicao);
+
                 inserirRegistro(registros[posicao]);
                 break;
             case 2:
@@ -289,7 +295,8 @@ void menu(){
 
                 printf("Qual o registro deseja remover?\n");
                 scanf("%d", &posicao);
-                removerRegistro(remover[posicao].cod_vei, remover[posicao].cod_cli);
+
+                removerRegistro(registrosRemover[posicao].cod_vei, registrosRemover[posicao].cod_cli);
                 break;
             case 3:
                 compactarArquivo();
