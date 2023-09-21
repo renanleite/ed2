@@ -57,12 +57,14 @@ int buscaEspaco(char tamanho){
     }
 
     if(offset == -1){
+        fclose(arquivo);
         return -1;
     }
     else{
         //Atualiza o offset do começo
         rewind(arquivo);
-        fwrite(&offsetAnterior, sizeof(int), 1, arquivo);
+        fwrite(&offset, sizeof(int), 1, arquivo);
+        fclose(arquivo);
         return offsetAnterior;
     }
 
@@ -99,7 +101,7 @@ void inserirRegistro(struct RegistroLocacao registroInserir) {
             fwrite(&tamanhoDoRegistro, sizeof(char), 1, arquivo);
         }
         else{
-            fseek(arquivo, offset, SEEK_SET);
+            fseek(arquivo, offset + 1, SEEK_SET);
         }
     }
 
@@ -122,7 +124,9 @@ void inserirRegistro(struct RegistroLocacao registroInserir) {
 //Adiciona um novo Offset a "pilha"
 int adicionaOffset(int posicaoRemovido){
     FILE *arquivo = fopen("registro.bin", "rb+");
-    int offset = 0, offsetAnterior = -1;
+    int offset, offsetAnterior = -1;
+
+    rewind(arquivo);
 
     fread(&offset, sizeof(int), 1, arquivo);
     while(offset != -1){
@@ -132,7 +136,7 @@ int adicionaOffset(int posicaoRemovido){
     }
 
     rewind(arquivo);
-    fprintf(arquivo, "%d", posicaoRemovido);
+    fwrite(&posicaoRemovido, sizeof(int), 1, arquivo);
     fclose(arquivo);
     return offsetAnterior;
 }
@@ -143,7 +147,7 @@ void removerRegistro(char CodVei[], char CodCli[]) {
 
     char CodVeiRegistro[8], CodCliRegistro[12], tamanhoRegistro;
     bool RegistroEncontrado = false;
-    
+
     int tamanhoCodCliente = 11;
     int tamanhoCodVeiculo = 7;
     int offset;
@@ -159,7 +163,7 @@ void removerRegistro(char CodVei[], char CodCli[]) {
             fseek(arquivo, tamanhoRegistro - 19, SEEK_CUR); // Pular para o próximo registro
         } else {
             RegistroEncontrado = true;
-            offset = (int)ftell(arquivo) - 19; // Calcular o offset
+            offset = (int)ftell(arquivo) - 20; // Calcular o offset
             break;
         }
     }
@@ -168,6 +172,7 @@ void removerRegistro(char CodVei[], char CodCli[]) {
 
         fseek(arquivo, offset, SEEK_SET);
         offset = adicionaOffset(offset);
+        fseek(arquivo, 1, SEEK_CUR);
         
         fwrite("*", sizeof(char), 1, arquivo);
         fwrite(&offset, sizeof(int), 1, arquivo);
@@ -186,9 +191,11 @@ void compactarArquivo() {
     FILE *arquivoCompactado = fopen("novo.bin", "w+b");
 
     int offset, contadorPartes, quantidadeDados = 5;
+    int offsetInicial = -1;
     char tamanho, buffer[sizeof(struct RegistroLocacao)];
 
     fread(&offset, sizeof(char), 1, arquivo);
+    fwrite(&offsetInicial, sizeof(int), 1, arquivoCompactado);
 
     while(fread(&tamanho, sizeof(char), 1, arquivo)){
         fread(buffer, sizeof(char), tamanho, arquivo);
@@ -205,6 +212,7 @@ void compactarArquivo() {
                     tamanho = i;
                     fwrite(&tamanho, sizeof(char), 1, arquivoCompactado);
                     fwrite(buffer, sizeof(char), tamanho, arquivoCompactado);
+                    fwrite("|", sizeof(char), 1, arquivoCompactado);
                     contadorPartes = 0;
                     break;
                 }
