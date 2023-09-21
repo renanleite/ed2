@@ -12,6 +12,21 @@ struct RegistroLocacao {
 
 struct RegistroLocacao registros[100];  // TODO: Mudar para dentro da função, retornando do carrega arquivo
 
+//Função para verificar se o aqruivo existe e caso não, ele irá criar e inicializar com -1, indicando que não há espaços vazios no arquivo
+void criaArquivo(){
+    FILE *arquivo;
+    if(arquivo = fopen("registro.bin", "rb")){
+        fclose(arquivo);
+        return;
+    }
+    else{
+        int offset = -1;
+        arquivo = fopen("registro.bin", "w+b");
+        fwrite(&offset, 1, sizeof(int), arquivo);
+        fclose(arquivo);
+    }
+}
+
 // Função para inserção de um registro no final do arquivo TODO: verificar tamanho disponivel antes de inserir
 void inserirRegistro(struct RegistroLocacao registroInserir) {
 
@@ -22,8 +37,6 @@ void inserirRegistro(struct RegistroLocacao registroInserir) {
         perror("Erro ao abrir o arquivo");
         return;
     }
-    int teste = -1;
-    fwrite(&teste, 1, sizeof(int), arquivo);
 
     tamanho = 18 + strlen(registroInserir.NomeCliente) + strlen(registroInserir.NomeVeiculo) + 4;
 
