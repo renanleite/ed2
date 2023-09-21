@@ -20,6 +20,7 @@ struct RegistroLocacao {
 struct RegistroLocacao registros[100];  // TODO: Mudar para dentro da função, retornando do carrega arquivo
 struct RegistroArquivoRemove registrosRemover[100]; //Verificar se vai fazer Array tamanho fixo ou Malloc
 
+int totalRegistrosCarregados;
 
 //Função para verificar se o arquivo existe e caso não, ele irá criar e inicializar com -1, indicando que não há espaços vazios no arquivo
 void criaArquivo(){
@@ -37,10 +38,9 @@ void criaArquivo(){
     }
 }
 
-// Função para inserção de um registro no final do arquivo TODO: verificar tamanho disponivel antes de inserir
+// Função para inserção de um registro no final do arquivo 
+// TODO: verificar tamanho disponivel antes de inserir
 void inserirRegistro(struct RegistroLocacao registroInserir) {
-
-    //TODO: TRATAR CASO NÃO EXISTA O REGISTRO INSERIDO DA POSIÇÃO
     
     FILE *arquivo = fopen("registro.bin", "a+b");
     char tamanhoDoRegistro;
@@ -192,6 +192,8 @@ void carregarArquivo() {
     }
     fclose(arquivo);
 
+    totalRegistrosCarregados = quantidadeRegistros;
+
     //Fazendo para Remove.bin
     arquivo = fopen("remove.bin", "rb");
     quantidadeRegistros = 0;
@@ -268,7 +270,7 @@ int imprimirMenu() {
     int resposta;
 
     printf("Escolha uma opção:\n");
-    printf("(1)Inserir\n(2)Remover\n(3)Compactar\n(4)Carregar Arquivos\n(5)Ler Arquivo\n(6)Sair\n");
+    printf("(1)Inserir\n(2)Remover\n(3)Compactar\n(4)Carregar Arquivos\n(5)Sair\n");
     scanf("%d", &resposta);
 
     return resposta;
@@ -288,7 +290,12 @@ void menu(){
                 printf("Qual o registro deseja inserir?\n");
                 scanf("%d", &posicao);
 
-                inserirRegistro(registros[posicao]);
+                if(posicao < totalRegistrosCarregados){
+                    inserirRegistro(registros[posicao]);
+                }
+                else{
+                    printf("\n---Valor Inválido de registro---\n\n");
+                }
                 break;
             case 2:
                 system("clear");
@@ -305,9 +312,6 @@ void menu(){
                 carregarArquivo();
                 break;
             case 5:
-                lerArquivo();
-                break;
-            case 6:
                 system("clear");
 
                 printf("\n---Finalizando o programa!!!---\n\n");
@@ -318,7 +322,7 @@ void menu(){
                 printf("\n---Valor Inválido---\n\n");
         }
     }
-    while(resposta != 6);
+    while(resposta != 5);
 }
 
 // Função main
