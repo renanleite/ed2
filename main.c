@@ -131,7 +131,8 @@ int adicionaOffset(int posicaoRemovido){
     }
 
     rewind(arquivo);
-    fwrite(&posicaoRemovido, sizeof(int), 1, arquivo);
+    fprintf(arquivo, "%d", posicaoRemovido);
+    fclose(arquivo);
     return offsetAnterior;
 }
 
