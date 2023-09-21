@@ -46,6 +46,8 @@ void inserirRegistro(struct RegistroLocacao registroInserir) {
     fwrite("|", 1, sizeof(char), arquivo);
     fwrite(registroInserir.NumeroDias, 1, sizeof (int), arquivo);
     fwrite("|", 1, sizeof(char), arquivo);
+
+    printf("\n---Registro Inserido com sucesso---\n\n");
 }
 
 // Função para remover os registros TODO: precisamos remover o registro baseado na chave primaria (CodCli + CodVei)
@@ -85,6 +87,7 @@ void menu(FILE *file){
 
         switch (resposta) {
             case 1:
+                system("clear");
                 inserirRegistro(registros[1]);  // Usando um registro de exemplo para testar, mudar depois
                 break;
             case 2:
