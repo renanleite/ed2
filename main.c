@@ -21,6 +21,7 @@ struct RegistroLocacao {
 struct RegistroLocacao registros[100];  // TODO: Mudar para dentro da função, retornando do carrega arquivo
 struct RegistroArquivoRemove registrosRemover[100]; //Verificar se vai fazer Array tamanho fixo ou Malloc
 
+int totalResgistrosCarregados;
 
 //Função para verificar se o arquivo existe e caso não, ele irá criar e inicializar com -1, indicando que não há espaços vazios no arquivo
 void criaArquivo(){
@@ -142,14 +143,17 @@ void removerRegistro(char CodVei[], char CodCli[]) {
 
     char CodVeiRegistro[8], CodCliRegistro[12], tamanhoRegistro;
     bool RegistroEncontrado = false;
+    
+    int tamanhoCodCliente = 11;
+    int tamanhoCodVeiculo = 7;
     int offset;
 
     fread(&offset, sizeof(int), 1, arquivo); //Lendo o offset inicial
     while(fread(&tamanhoRegistro, sizeof(char), 1, arquivo)){
         
-        fread(&CodCliRegistro, sizeof(char), 11, arquivo);
+        fread(&CodCliRegistro, sizeof(char), tamanhoCodCliente, arquivo);
         fseek(arquivo, 1, SEEK_CUR);
-        fread(&CodVeiRegistro, sizeof(char), 7, arquivo);
+        fread(&CodVeiRegistro, sizeof(char), tamanhoCodVeiculo, arquivo);
 
         if (strcmp(CodVei, CodVeiRegistro) != 0 && strcmp(CodCli, CodCliRegistro) != 0) {
             fseek(arquivo, tamanhoRegistro - 19, SEEK_CUR); // Pular para o próximo registro
@@ -204,11 +208,8 @@ void compactarArquivo() {
                     contadorPartes = 0;
                     break;
                 }
-
             }
-
         }
-
     }
 
     //Deleta o arquivo fragmentado e substitui pelo novo
@@ -216,7 +217,6 @@ void compactarArquivo() {
     fclose(arquivoCompactado);
     remove("registro.bin");
     rename("novo.bin", "registro.bin");
-
 }
 
 // Vai abrir o arquivo insere.bin e carregar todos os registros em um vetor de structs
@@ -234,6 +234,8 @@ void carregarArquivo() {
         quantidadeRegistros++;
     }
     fclose(arquivo);
+
+    totalResgistrosCarregados = quantidadeRegistros;
 
     //Fazendo para Remove.bin
     arquivo = fopen("remove.bin", "rb");
@@ -265,7 +267,7 @@ int imprimirMenu() {
     int resposta;
 
     printf("Escolha uma opção:\n");
-    printf("(1)Inserir\n(2)Remover\n(3)Compactar\n(4)Carregar Arquivos\n(5)Ler Arquivo\n(6)Sair\n");
+    printf("(1)Inserir\n(2)Remover\n(3)Compactar\n(4)Carregar Arquivos\n(5)Sair\n");
     scanf("%d", &resposta);
 
     return resposta;
@@ -285,7 +287,12 @@ void menu(){
                 printf("Qual o registro deseja inserir?\n");
                 scanf("%d", &posicao);
 
-                inserirRegistro(registros[posicao]);
+                if(posicao < totalResgistrosCarregados){
+                    inserirRegistro(registros[posicao]);
+                }
+                else{
+                    printf("\n---Valor do registro invalido---\n\n");
+                }
                 break;
             case 2:
                 system("clear");
@@ -302,9 +309,6 @@ void menu(){
                 carregarArquivo();
                 break;
             case 5:
-                lerArquivo();
-                break;
-            case 6:
                 system("clear");
 
                 printf("\n---Finalizando o programa!!!---\n\n");
@@ -315,7 +319,7 @@ void menu(){
                 printf("\n---Valor Inválido---\n\n");
         }
     }
-    while(resposta != 6);
+    while(resposta != 5);
 }
 
 // Função main
