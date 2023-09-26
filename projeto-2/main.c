@@ -119,9 +119,11 @@ bool verificaPareamento(){
     char pareamento;
     fread(&pareamento, sizeof(char), 1, arquivoBusca);
     if(pareamento != 'P'){
+        fclose(arquivoBusca);
         return false;
     }
     else{
+        fclose(arquivoBusca);
         return true;
     }
 }
@@ -133,10 +135,11 @@ int buscarRegistro(char codCli[],char codVei[]){
     char codVeiRegistro[8], codCliRegistro[12], tamanhoRegistro, pareamento;
     int posicaoAtual = 0, posicaoRegistro = Não_Encontrado;
 
-    fread(&pareamento, sizeof(char), 1, arquivoBusca);
-    if(pareamento != 'P'){
-        return Não_Pareado;
+    if(!verificarPareamento()){
+        fclose(arquivoBusca);
+        return Não_Pareado
     }
+    fseek(arquivoBusca, 1, SEEK_CUR); // Pula o pareamento que ja foi 
     while(fread(&codCliRegistro, sizeof(char), 12, arquivoBusca)){
         fseek(arquivoBusca, 1, SEEK_CUR);
         fread(&codVeiRegistro, sizeof(char), 8, arquivoBusca);
@@ -429,7 +432,7 @@ void menu(){
                 scanf("%d", &posicao);
 
                 if(posicao < totalRegistrosCarregados){
-                    buscarRegistro(registrosBusca[posicao].cod_cli, registrosBusca[posicao].cod_vei);
+                    exibeRegistro(buscarRegistro(registrosBusca[posicao].cod_cli, registrosBusca[posicao].cod_vei));
                 }
                 else{
                     printf("\n---Valor Inválido de registro---\n\n");
