@@ -1,0 +1,6 @@
+Seguem alguns esclarecimentos sobre o desenvolvimento do projeto e os pontos que serão avaliados
+- o arquivo de índice deve seguir uma estrutura de registro fixo campo fixo
+- o índice deve ser carregado para a memória ao iniciar a aplicação (e.g., para um vetor). Toda as operações sobre o índice devem ser feitas em memória (i.e., sem nenhum tipo de acesso ao arquivo dele no disco). O índice deve ser salvo para o arquivo de índice somente ao fechar a aplicação.
+- Por definição o índice deve estar sempre ordenado. Isto deve ser feito em memória - a cada operação que afete a ordem do índice. Pelo mesmo motivo, o arquivo de índice deve ser salvo de forma ordenada (apenas ao fechar a aplicação - ver item anterior).
+- o arquivo principal deve ter uma estrutura de registro variavel e campo variavel; 1 byte como indicador de tamanho; e, campos separados pelo caracter '|'
+- A cada insercao o vetor do indice deve ser ordenado apenas em memoria (pode-se usar metodos de ordenacao built-in do C). Ao fechar a aplicacao o mesmo deve ser gravado de forma ordenada no arquivo de indice (e.g., como este deve estar ordenado em memoria, pode-se gravar o mesmo em um novo arquivo e substituir o antigo)
