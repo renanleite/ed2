@@ -27,23 +27,32 @@ int quantidadeIndices;
 
 //Cria os arquivos e verifica se o Indice está pareado
 void criaArquivo(){
-    FILE *arquivoBusca;
     FILE *arquivo = fopen("registro.bin", "a+b");
+    FILE *arquivoBusca = fopen("indices.bin", "rb");
 
-    if ((arquivo == NULL)) {
+    if (arquivo == NULL) {
         perror("Erro ao abrir o arquivo");
         return;
     }
 
-    if(arquivoBusca = fopen("indice.bin", "rb")){
-        fclose(arquivoBusca);
-        return;
+}
+
+//Cria o Arquivo de Indice inserindo os dados do vetor
+void criaIndice(){
+
+    FILE *arquivoBusca = fopen("indice.bin", "w+b");
+
+    fwrite('N', 1, sizeof(char), arquivoBusca); //Insere Não Pareado para caso ocorra alguma interrupção durante a inserção
+
+    for(int i = 0; i < quantidadeIndices; i++){
+        fwrite(indices[i].cod_cli, 12, sizeof(char), arquivoBusca);
+        fwrite(indices[i].cod_vei, 8, sizeof(char), arquivoBusca);
     }
-    else{
-        arquivoBusca = fopen("indice.bin", "w+b");
-        fwrite('N', 1, sizeof(char), arquivoBusca);
-        fclose(arquivoBusca);
-    }
+
+    rewind(arquivoBusca);
+    fwrite('P', 1, sizeof(char), arquivoBusca); //Atualiza para Pareado ao fim da inserção
+    fclose(arquivoBusca);
+
 }
 
 //Verifica se há pareamento, nesse caso retorna true
@@ -64,7 +73,7 @@ int buscarRegistro(char codCli[],char codVei[]){
 
     FILE *arquivoBusca = fopen("indice.bin", "rb");
     char codVeiRegistro[8], codCliRegistro[12], tamanhoRegistro, pareamento;
-    int posicaoAtual, posicaoRegistro = Não_Encontrado;
+    int posicaoAtual = 0, posicaoRegistro = Não_Encontrado;
 
     fread(&pareamento, sizeof(char), 1, arquivoBusca);
     if(pareamento != 'P'){
@@ -91,8 +100,159 @@ int buscarRegistro(char codCli[],char codVei[]){
 
 }
 
+//Printa o registro desejado
+void exibeRegistro(int posicao){
+
+    if(posicao == -1){
+        printf("\nNão foi possível encontrar o registro\n");
+        return;
+    }
+
+    char tamanhoRegistro;
+    char caracter = 'a';
+    struct RegistroLocacao aux;
+    FILE *arquivo = fopen("registro.bin", "rb");
+
+    //Percorre o arquivo até a posição desejada
+    for(int i = 0; i < posicao; i++){
+        fread(&tamanhoRegistro, sizeof(char), 1, arquivo);
+        fseek(arquivo, tamanhoRegistro + 5, SEEK_CUR);
+    }
+    fread(&tamanhoRegistro, sizeof(char), 1, arquivo);
+    fread(&aux.CodCli, sizeof(char), 12, arquivo);
+    fseek(arquivo, 1, SEEK_CUR);
+    fread(&aux.CodVei, sizeof(char), 8, arquivo);
+    fseek(arquivo, 1, SEEK_CUR);
+
+    //Leitura dos registros Variaveis;
+    while(caracter != '|'){
+        fread(caracter, sizeof(char), 1, arquivo);
+        if(caracter != '|'){
+            strncat(aux.NomeCliente, caracter, 1);
+        }
+    }
+    fseek(arquivo, 1, SEEK_CUR);
+    caracter = 'a'; //Reiniciando caracter
+    while(caracter != '|'){
+        fread(caracter, sizeof(char), 1, arquivo);
+        if(caracter != '|'){
+            strncat(aux.NomeVeiculo, caracter, 1);
+        }
+    }
+
+    fseek(arquivo, 1, SEEK_CUR);
+    fread(&aux.NumeroDias, sizeof(int), 1, arquivo);
+
+    //printa o registro
+    printf("\n----------------------------------------------------------------------\n");
+    printf("%s | %s | %s | %s | %d", aux.CodCli, aux.CodVei, aux.NomeCliente, aux.NomeVeiculo, aux.NumeroDias);
+    printf("\n----------------------------------------------------------------------\n");
+    
+    fclose(arquivo);
+}
+
 //Função para ordenar os indices e em seguida o arquivo de Dados
 void ordenaArquivos(){
+
+    int posicoes[100];
+    int i,j;
+    for(i = 0; i < quantidadeIndices; i++){
+        posicoes[i] = i;
+    }
+    struct RegistroArquivoBusca aux;
+
+    //BubbleSort para ordenar as chaves
+    for(i = 0; i < quantidadeIndices; i++){
+        for(j = 0; j < quantidadeIndices - i; j++){
+
+            //CodCli é a chave principal da ordenação, se ambas forem iguais, é comparado então CodVei
+            if(indices[i].cod_cli > indices[j].cod_cli){ 
+                aux = indices[i];
+                indices[i] = indices[j];
+                indices[j] = aux;
+                posicoes[i] = j;
+                posicoes[j] = i;
+            }
+            else if((indices[i].cod_cli == indices[j].cod_cli) && (indices[i].cod_vei > indices[j].cod_vei)){
+                aux = indices[i];
+                indices[i] = indices[j];
+                indices[j] = aux;
+                posicoes[i] = j;
+                posicoes[j] = i;
+            }
+
+        }
+    }
+
+    //Atualiza o arquivo de Dados
+    ordenaDados(posicoes[100]);
+
+}
+
+void ordenaDados(int posicoes[]){
+
+    FILE *arquivo = fopen("registro.bin", "rb");
+    FILE *arquivoOrdenado = fopen("ordenado.bin", "w+b");
+    char tamanhoRegistro;
+    char caracter;
+    struct RegistroLocacao aux;
+    int posicaoTroca;
+
+    for(int i = 0; i < quantidadeIndices; i++){
+        posicaoTroca = 0;
+        //Percorre o arquivo até a posição desejada
+        while(posicaoTroca < posicoes[i]){
+            fread(&tamanhoRegistro, sizeof(char), 1, arquivo);
+            fseek(arquivo, tamanhoRegistro + 5, SEEK_CUR);
+        }
+
+        //Insere ordenado no arquivo novo
+        fread(&tamanhoRegistro, sizeof(char), 1, arquivo);
+        fread(&aux.CodCli, sizeof(char), 12, arquivo);
+        fseek(arquivo, 1, SEEK_CUR);
+        fread(&aux.CodVei, sizeof(char), 8, arquivo);
+        fseek(arquivo, 1, SEEK_CUR);
+
+        //Leitura dos registros Variaveis;
+        while(caracter != '|'){
+            fread(caracter, sizeof(char), 1, arquivo);
+            if(caracter != '|'){
+                strncat(aux.NomeCliente, caracter, 1);
+            }
+        }
+        fseek(arquivo, 1, SEEK_CUR);
+        caracter = 'a'; //Reiniciando caracter
+        while(caracter != '|'){
+            fread(caracter, sizeof(char), 1, arquivo);
+            if(caracter != '|'){
+                strncat(aux.NomeVeiculo, caracter, 1);
+            }
+        }
+
+        fseek(arquivo, 1, SEEK_CUR);
+        fread(&aux.NumeroDias, sizeof(int), 1, arquivo);
+
+        rewind(arquivo);
+
+        //Inserção do registro no Novo Arquivo
+        fwrite(tamanhoRegistro, 1, sizeof(char), arquivoOrdenado);
+        fwrite(aux.CodCli, 1, strlen(aux.CodCli), arquivoOrdenado);
+        fwrite("|", 1, sizeof(char), arquivo);
+        fwrite(aux.CodVei, 1, strlen(aux.CodVei), arquivoOrdenado);
+        fwrite("|", 1, sizeof(char), arquivo);
+        fwrite(aux.NomeCliente, 1, strlen(aux.NomeCliente), arquivoOrdenado);
+        fwrite("|", 1, sizeof(char), arquivo);
+        fwrite(aux.NomeVeiculo, 1, strlen(aux.NomeVeiculo), arquivoOrdenado);
+        fwrite("|", 1, sizeof(char), arquivo);
+        fwrite(aux.NumeroDias, 1, sizeof (int), arquivoOrdenado);
+        fwrite("|", 1, sizeof(char), arquivoOrdenado);
+
+    }
+
+    fclose(arquivo);
+    fclose(arquivoOrdenado);
+    remove("registro.bin");
+    rename("ordenado.bin", "registro.bin");
 
 }
 
@@ -131,6 +291,9 @@ void inserirRegistro(struct RegistroLocacao registroInserir) {
     strcpy(indices[quantidadeIndices].cod_cli, registroInserir.CodCli);
     strcpy(indices[quantidadeIndices].cod_vei, registroInserir.CodVei);
     ordenaArquivos();
+
+    fclose(arquivo);
+    fclose(arquivoBusca);
 
     printf("\n---Registro Inserido com sucesso---\n\n");
 }
@@ -220,6 +383,7 @@ void menu(){
             case 4:
                 system("clear");
 
+                criaIndice();
                 printf("\n---Finalizando o programa!!!---\n\n");
                 break;
             default:
