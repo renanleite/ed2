@@ -68,7 +68,6 @@ int buscaEspaco(char tamanho){
         return offsetAnterior;
     }
 
-
 }
 
 // Função para inserção de um registro no final do arquivo
@@ -146,11 +145,19 @@ void removerRegistro(char CodVei[], char CodCli[]) {
     FILE *arquivo = fopen("registro.bin", "rb+");
 
     char CodVeiRegistro[8], CodCliRegistro[12], tamanhoRegistro;
+    char CodVeiCopy[8];
+    char CodCliCopy[12];
+
+    strcpy(CodVeiCopy, CodVei);
+    strcpy(CodCliCopy, CodCli);
+
+
     bool RegistroEncontrado = false;
 
     int tamanhoCodCliente = 11;
     int tamanhoCodVeiculo = 7;
     int offset;
+    int i;
 
     fread(&offset, sizeof(int), 1, arquivo); //Lendo o offset inicial
     while(fread(&tamanhoRegistro, sizeof(char), 1, arquivo)){
@@ -159,13 +166,17 @@ void removerRegistro(char CodVei[], char CodCli[]) {
         fseek(arquivo, 1, SEEK_CUR);
         fread(&CodVeiRegistro, sizeof(char), tamanhoCodVeiculo, arquivo);
 
-        if (strcmp(CodVei, CodVeiRegistro) != 0 && strcmp(CodCli, CodCliRegistro) != 0) {
-            fseek(arquivo, tamanhoRegistro - 19, SEEK_CUR); // Pular para o próximo registro
-        } else {
+        bool primeiro = (strncmp(CodVeiCopy,CodVeiRegistro, 7) == 0);
+        bool segundo = (strncmp(CodCliCopy,CodCliRegistro, 11) == 0);
+
+        if (primeiro && segundo) {
             RegistroEncontrado = true;
             offset = (int)ftell(arquivo) - 20; // Calcular o offset
             break;
+        } else {
+            fseek(arquivo, tamanhoRegistro - 19, SEEK_CUR); // Pular para o próximo registro
         }
+
     }
 
     if(RegistroEncontrado){  //Remove o registro
