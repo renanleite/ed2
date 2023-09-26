@@ -28,12 +28,70 @@ int quantidadeIndices;
 //Cria os arquivos e verifica se o Indice está pareado
 void criaArquivo(){
     FILE *arquivo = fopen("registro.bin", "a+b");
-    FILE *arquivoBusca = fopen("indices.bin", "rb");
+    FILE *arquivoBusca;
+    char pareamento;
 
     if (arquivo == NULL) {
         perror("Erro ao abrir o arquivo");
         return;
     }
+
+    if(arquivoBusca = fopen("indices.bin", "rb")){
+
+        //Verifica pareamento para copiar os indices ou montar a partir dos dados
+        if(verificaPareamento()){
+            copiaArrayIndice();
+        }
+        else{
+            montaArrayIndice();
+        }
+    }
+    else{
+        montaArrayIndice();
+    }
+}
+
+//Copia dados do Indice
+void copiaArrayIndice(){
+
+    FILE *arquivoBusca = fopen("indice.bin", "rb");
+    char codVeiRegistro[8], codCliRegistro[12], tamanhoRegistro, pareamento;
+    quantidadeIndices = 0;
+
+    fread(&pareamento, sizeof(char), 1, arquivoBusca);
+    while(fread(&codCliRegistro, sizeof(char), 12, arquivoBusca)){
+        fseek(arquivoBusca, 1, SEEK_CUR);
+        fread(&codVeiRegistro, sizeof(char), 8, arquivoBusca);
+
+        strcpy(indices[quantidadeIndices].cod_cli , codCliRegistro);
+        strcpy(indices[quantidadeIndices].cod_vei , codVeiRegistro);
+        quantidadeIndices++;
+    }
+
+    fclose(arquivoBusca);
+
+}
+
+//Monta indices a partir dos Dados e depois ordena
+void montaArrayIndice(){
+
+    FILE *arquivo = fopen("registo.bin", "rb");
+    char codVeiRegistro[8], codCliRegistro[12], tamanhoRegistro;
+
+    while(fread(&tamanhoRegistro, sizeof(char), 1, arquivo)){
+        
+        fread(&tamanhoRegistro, sizeof(char), 1, arquivo);
+        fread(&codCliRegistro, sizeof(char), 12, arquivo);
+        fseek(arquivo, 1, SEEK_CUR);
+        fread(&codVeiRegistro, sizeof(char), 8, arquivo);
+
+        strcpy(indices[quantidadeIndices].cod_cli , codCliRegistro);
+        strcpy(indices[quantidadeIndices].cod_vei , codVeiRegistro);
+        quantidadeIndices++;
+
+        fseek(arquivo, tamanhoRegistro - 19, SEEK_CUR);
+    }
+    ordenaArquivos();
 
 }
 
