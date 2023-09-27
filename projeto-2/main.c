@@ -3,6 +3,9 @@
 #include <string.h>
 #include <stdbool.h>
 
+#define NAOENCONTRADO -1;
+#define NAOPAREADO -2;
+
 struct RegistroArquivoBusca { //Proveniente do arquivo Busca_p.bin
     char cod_cli[12];
     char cod_vei[8];
@@ -16,14 +19,24 @@ struct RegistroLocacao {
     char NumeroDias[4];    // +1 para o caractere nulo ('\0')
 };
 
-#define Não_Encontrado -1;
-#define Não_Pareado -2;
-
 struct RegistroLocacao registros[100];
 struct RegistroArquivoBusca registrosBusca[100];
 struct RegistroArquivoBusca indices[100];
 int totalRegistrosCarregados;
 int quantidadeIndices;
+
+//Verifica se há pareamento, nesse caso retorna true
+bool verificaPareamento(){
+    FILE *arquivoBusca = fopen("indices.bin", "rb");
+    char pareamento;
+    fread(&pareamento, sizeof(char), 1, arquivoBusca);
+    if(pareamento != 'P'){
+        fclose(arquivoBusca);
+        return false;
+    }
+    fclose(arquivoBusca);
+    return true;
+}
 
 //Cria os arquivos e verifica se o Indice está pareado
 void criaArquivo(){
@@ -38,8 +51,10 @@ void criaArquivo(){
 
     if(arquivoBusca = fopen("indices.bin", "rb")){
 
+        bool verifica = verificaPareamento();
+
         //Verifica pareamento para copiar os indices ou montar a partir dos dados
-        if(verificaPareamento()){
+        if(verifica){
             copiaArrayIndice();
         }
         else{
@@ -113,31 +128,16 @@ void criaIndice(){
 
 }
 
-//Verifica se há pareamento, nesse caso retorna true
-bool verificaPareamento(){
-    FILE *arquivoBusca = fopen("indices.bin", "rb");
-    char pareamento;
-    fread(&pareamento, sizeof(char), 1, arquivoBusca);
-    if(pareamento != 'P'){
-        fclose(arquivoBusca);
-        return false;
-    }
-    else{
-        fclose(arquivoBusca);
-        return true;
-    }
-}
-
 //Pesquisa o Indice e retorna a posicao dele caso o arquivo esteja
 int buscarRegistro(char codCli[],char codVei[]){
 
     FILE *arquivoBusca = fopen("indice.bin", "rb");
     char codVeiRegistro[8], codCliRegistro[12], tamanhoRegistro, pareamento;
-    int posicaoAtual = 0, posicaoRegistro = Não_Encontrado;
+    int posicaoAtual = 0, posicaoRegistro = NAOENCONTRADO;
 
     if(!verificarPareamento()){
         fclose(arquivoBusca);
-        return Não_Pareado
+        return NAOPAREADO;
     }
     fseek(arquivoBusca, 1, SEEK_CUR); // Pula o pareamento que ja foi 
     while(fread(&codCliRegistro, sizeof(char), 12, arquivoBusca)){
