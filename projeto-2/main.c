@@ -221,17 +221,17 @@ void ordenaArquivos(){
 
     //BubbleSort para ordenar as chaves
     for(i = 0; i < quantidadeIndices; i++){
-        for(j = 0; j < quantidadeIndices -1; j++){
+        for(j = 0; j < quantidadeIndices -i -1; j++){
 
             //CodCli é a chave principal da ordenação, se ambas forem iguais, é comparado então CodVei
-            if(indices[i].cod_cli > indices[j].cod_cli){ 
-                aux = indices[i];
-                indices[i] = indices[j];
+            if(indices[j].cod_cli > indices[j+1].cod_cli){ 
+                aux = indices[j+1];
+                indices[j+1] = indices[j];
                 indices[j] = aux;
             }
-            else if((indices[i].cod_cli == indices[j].cod_cli) && (indices[i].cod_vei > indices[j].cod_vei)){
-                aux = indices[i];
-                indices[i] = indices[j];
+            else if((indices[j].cod_cli == indices[j+1].cod_cli) && (indices[j].cod_vei > indices[j+1].cod_vei)){
+                aux = indices[j+1];
+                indices[j+1] = indices[j];
                 indices[j] = aux;
             }
 
