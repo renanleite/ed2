@@ -128,6 +128,7 @@ void criarArquivoVerificarIndice(){
     FILE *arquivoIndice;
     char pareamento;
 
+    //TODO: Caso registro.bin esteja vazio, mesmo existindo. resolver o problema a seguir.
     if(arquivo = fopen("registro.bin", "rb")){
         if(arquivoIndice = fopen("indice.bin", "rb")){
 
