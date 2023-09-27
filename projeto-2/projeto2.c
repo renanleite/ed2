@@ -32,7 +32,7 @@ struct RegistroLocacao {
     char CodVei[8];   // +1 para o caractere nulo ('\0')
     char NomeCliente[50];  // +1 para o caractere nulo ('\0')
     char NomeVeiculo[50];  // +1 para o caractere nulo ('\0')
-    char NumeroDias[4];    // +1 para o caractere nulo ('\0')
+    char NumeroDias[4];    // sem caractere nulo (representa int)
 };
 
 struct RegistroLocacao registros[100];
@@ -128,27 +128,30 @@ void criarArquivoVerificarIndice(){
     FILE *arquivoIndice;
     char pareamento;
 
-    //TODO: Caso registro.bin esteja vazio, mesmo existindo. resolver o problema a seguir.
-    if(arquivo = fopen("registro.bin", "rb")){
-        if(arquivoIndice = fopen("indice.bin", "rb")){
+    if((arquivo = fopen("registro.bin", "rb"))){
+        fseek (arquivo, 0, SEEK_END);
+        int size = ftell(arquivo);
+        if (size != 0) {
+            if((arquivoIndice = fopen("indice.bin", "rb"))){
 
-            bool verifica = verificaPareamento();
+                bool verifica = verificaPareamento();
 
-            //Verifica pareamento para copiar os indices ou montar a partir dos dados
-            if(verifica){
-                copiaArrayIndice();
+                //Verifica pareamento para copiar os indices ou montar a partir dos dados
+                if(verifica){
+                    copiaArrayIndice();
+                }
+                else{
+                    montaArrayIndice();
+                }
             }
             else{
                 montaArrayIndice();
             }
-        }
-        else{
-            montaArrayIndice();
-        }
 
-        fclose(arquivo);
-        fclose(arquivoIndice);
-        return;
+            fclose(arquivo);
+            fclose(arquivoIndice);
+            return;
+        }
     }
     else{
         arquivo = fopen("registro.bin", "w+b");
@@ -215,6 +218,7 @@ void menu(){
                 scanf("%d", &posicao);
 
                 if(posicao < totalRegistrosCarregados){
+                    criaIndice();
                     inserirRegistro(registros[posicao]);
                 }
                 else{
@@ -239,8 +243,6 @@ void menu(){
                 break;
             case 4:
                 system("clear");
-
-                criaIndice();
                 printf("\n---Finalizando o programa!!!---\n\n");
                 break;
             default:
@@ -287,7 +289,7 @@ void criaIndice(){
         fwrite(indices[i].cod_cli, 12, sizeof(char), arquivoIndice);
         fwrite(indices[i].cod_vei, 8, sizeof(char), arquivoIndice);
         fwrite(" ", 1, sizeof(char), arquivoIndice);
-        fwrite(indices[i].posicao, 1, sizeof(int), arquivoIndice);
+        fwrite(&indices[i].posicao, 1, sizeof(int), arquivoIndice);
     }
 
     rewind(arquivoIndice);
@@ -346,17 +348,17 @@ void exibeRegistro(int posicao){
 
     //Leitura dos registros Variaveis;
     while(caracter != '|'){
-        fread(caracter, sizeof(char), 1, arquivo);
+        fread(&caracter, sizeof(char), 1, arquivo);
         if(caracter != '|'){
-            strncat(aux.NomeCliente, caracter, 1);
+            strncat(aux.NomeCliente, &caracter, 1);
         }
     }
     fseek(arquivo, 1, SEEK_CUR);
     caracter = 'a'; //Reiniciando caracter
     while(caracter != '|'){
-        fread(caracter, sizeof(char), 1, arquivo);
+        fread(&caracter, sizeof(char), 1, arquivo);
         if(caracter != '|'){
-            strncat(aux.NomeVeiculo, caracter, 1);
+            strncat(aux.NomeVeiculo, &caracter, 1);
         }
     }
 
