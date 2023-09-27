@@ -95,14 +95,21 @@ void copiaArrayIndice(){
     fclose(arquivoIndice);
 }
 
+bool isTamanhoRegistrado(char tamanhoRegistro, FILE *arquivo) {
+    bool isTamanhoRegistrado = (fread(&tamanhoRegistro, sizeof(char), 1, arquivo)) != NULL;
+    return isTamanhoRegistrado;
+}
+
 //Monta indices a partir dos Dados e depois ordena
 void montaArrayIndice(){
 
     FILE *arquivo = fopen("registo.bin", "rb");
     char codVeiRegistro[8], codCliRegistro[12], tamanhoRegistro;
 
+    //isTamanhoRegistrado(tamanhoRegistro, arquivo);
+
     while(fread(&tamanhoRegistro, sizeof(char), 1, arquivo)){
-        fread(&tamanhoRegistro, sizeof(char), 1, arquivo);
+        indices[quantidadeIndices].posicao = ftell(arquivo);
         fread(&codCliRegistro, sizeof(char), 12, arquivo);
         fseek(arquivo, 1, SEEK_CUR);
         fread(&codVeiRegistro, sizeof(char), 8, arquivo);
@@ -114,33 +121,37 @@ void montaArrayIndice(){
         fseek(arquivo, tamanhoRegistro - 19, SEEK_CUR);
     }
     ordenaArquivos();
-
 }
 
 void criarArquivoVerificarIndice(){
-    FILE *arquivo = fopen("registro.bin", "a+b");
+    FILE *arquivo;
     FILE *arquivoIndice;
     char pareamento;
 
-    if (arquivo == NULL) {
-        perror("Erro ao abrir o arquivo");
-        return;
-    }
+    if(arquivo = fopen("registro.bin", "rb")){
+        if(arquivoIndice = fopen("indice.bin", "rb")){
 
-    if(arquivoIndice = fopen("indices.bin", "rb")){
+            bool verifica = verificaPareamento();
 
-        bool verifica = verificaPareamento();
-
-        //Verifica pareamento para copiar os indices ou montar a partir dos dados
-        if(verifica){
-            copiaArrayIndice();
+            //Verifica pareamento para copiar os indices ou montar a partir dos dados
+            if(verifica){
+                copiaArrayIndice();
+            }
+            else{
+                montaArrayIndice();
+            }
         }
         else{
             montaArrayIndice();
         }
+
+        fclose(arquivo);
+        fclose(arquivoIndice);
+        return;
     }
     else{
-        montaArrayIndice();
+        arquivo = fopen("registro.bin", "w+b");
+        fclose(arquivo);
     }
 }
 
