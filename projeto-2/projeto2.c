@@ -6,15 +6,19 @@
 #define NAOENCONTRADO -1;
 #define NAOPAREADO -2;
 
-bool verificaPareamento();
+bool estarPareado();
+int buscarRegistro(char [],char []);
+int imprimirMenu();
+void menu();
 void criarArquivoVerificarIndice();
 void criaIndice();
-int buscarRegistro(char [],char []);
+void ordenarIndices();
+void copiaDadosDoIndice();
+void montaArrayIndiceOrdenaArquivo();
+void carregarArquivoInsere();
+void carregarArquivoBusca();
 void exibeRegistro(int);
-void ordenaArquivos();
-int imprimirMenu();
 void validarErroAbrirArquivo(FILE *);
-void menu();
 
 struct RegistroArquivoBusca { //Proveniente do arquivo Busca_p.bin
     char cod_cli[12];
@@ -46,113 +50,7 @@ int main() {
     return 0;
 }
 
-//Função para ordenar os indices
-void ordenaArquivos(){
-
-    int i,j;
-    struct RegistroIndice aux;
-    bool igualAoProximoCodigoCliente = false;
-
-    //BubbleSort para ordenar as chaves
-    for(i = 0; i < quantidadeIndices; i++){
-        for(j = 0; j < quantidadeIndices -i -1; j++){
-
-            igualAoProximoCodigoCliente = (strcmp(indices[j].chave, indices[j+1].chave) > 0);
-            
-            //CodCli é a chave principal da ordenação, se ambas forem iguais, é comparado então CodVei
-            if(igualAoProximoCodigoCliente) {
-                aux = indices[j];
-                indices[j] = indices[j+1];
-                indices[j+1] = aux;
-            }
-        }
-    }
-}
-
-//Copia dados do Indice
-void copiaArrayIndice(){
-
-    FILE *arquivoIndice = fopen("indice.bin", "rb");
-    char chaveRegistro[19], tamanhoRegistro, pareamento;
-    quantidadeIndices = 0;
-
-    fread(&pareamento, sizeof(char), 1, arquivoIndice);
-    while(fread(&chaveRegistro, sizeof(char), 19, arquivoIndice)){
-        fread(&indices[quantidadeIndices].posicao, sizeof(int), 1, arquivoIndice);
-
-        strcpy(indices[quantidadeIndices].chave , chaveRegistro);
-        quantidadeIndices++;
-    }
-
-    fclose(arquivoIndice);
-}
-
-bool isTamanhoRegistrado(char tamanhoRegistro, FILE *arquivo) {
-    bool isTamanhoRegistrado = (fread(&tamanhoRegistro, sizeof(char), 1, arquivo)) != NULL;
-    return isTamanhoRegistrado;
-}
-
-//Monta indices a partir dos Dados e depois ordena
-void montaArrayIndice(){
-
-    FILE *arquivo = fopen("registro.bin", "rb");
-    char codVeiRegistro[8], codCliRegistro[12], tamanhoRegistro;
-
-    //isTamanhoRegistrado(tamanhoRegistro, arquivo);
-
-    while(fread(&tamanhoRegistro, sizeof(char), 1, arquivo)){
-        indices[quantidadeIndices].posicao = quantidadeIndices + 1;
-        fread(&codCliRegistro, sizeof(char), 11, arquivo);
-        fseek(arquivo, 1, SEEK_CUR);
-        fread(&codVeiRegistro, sizeof(char), 7, arquivo);
-
-        strcpy(indices[quantidadeIndices].chave , codCliRegistro);
-        strcat(indices[quantidadeIndices].chave , codVeiRegistro);
-        quantidadeIndices++;
-
-        fseek(arquivo, tamanhoRegistro - 19, SEEK_CUR);
-    }
-    ordenaArquivos();
-}
-
-void criarArquivoVerificarIndice(){
-    FILE *arquivo;
-    FILE *arquivoIndice;
-    char pareamento;
-
-    if((arquivo = fopen("registro.bin", "rb"))){
-        fseek(arquivo, 0, SEEK_END);
-        int size = ftell(arquivo);
-        if (size != 0) {
-            if((arquivoIndice = fopen("indice.bin", "rb"))){
-
-                bool verifica = verificaPareamento();
-
-                //Verifica pareamento para copiar os indices ou montar a partir dos dados
-                if(verifica){
-                    copiaArrayIndice();
-                }
-                else{
-                    montaArrayIndice();
-                }
-                fclose(arquivoIndice);
-            }
-            else{
-                montaArrayIndice();
-            }
-
-            fclose(arquivo);
-            return;
-        }
-    }
-    else{
-        arquivo = fopen("registro.bin", "w+b");
-        fclose(arquivo);
-    }
-}
-
 void inserirRegistro(struct RegistroLocacao registroInserir) {
-    
     FILE *arquivo = fopen("registro.bin", "a+b");
     FILE *arquivoBusca;
     if((arquivoBusca = fopen("indice.bin", "rb+"))){
@@ -185,51 +83,11 @@ void inserirRegistro(struct RegistroLocacao registroInserir) {
     strcpy(indices[quantidadeIndices].chave , registroInserir.CodCli);
     strcat(indices[quantidadeIndices].chave , registroInserir.CodVei);
     quantidadeIndices++;
-    ordenaArquivos();
+    ordenarIndices();
 
     fclose(arquivo);
 
     printf("\n---Registro Inserido com sucesso---\n\n");
-}
-
-int imprimirMenu() {
-    int resposta;
-
-    printf("Escolha uma opção:\n");
-    printf("(1)Inserir\n(2)Buscar\n(3)Carregar Arquivos\n(4)Sair\n");
-    scanf("%d", &resposta);
-
-    return resposta;
-}
-
-//Verifica se há pareamento, nesse caso retorna true
-bool verificaPareamento(){
-    FILE *arquivoIndice = fopen("indice.bin", "rb");
-    char pareamento;
-    fread(&pareamento, sizeof(char), 1, arquivoIndice);
-    if(pareamento != 'P'){
-        fclose(arquivoIndice);
-        return false;
-    }
-    fclose(arquivoIndice);
-    return true;
-}
-
-//Cria o Arquivo de Indice inserindo os dados do vetor
-void criaIndice(){
-
-    FILE *arquivoIndice = fopen("indice.bin", "w+b");
-
-    fwrite("N", 1, sizeof(char), arquivoIndice); //Insere Não Pareado para caso ocorra alguma interrupção durante a inserção
-
-    for(int i = 0; i < quantidadeIndices; i++){
-        fwrite(indices[i].chave, 19, sizeof(char), arquivoIndice);
-        fwrite(&indices[i].posicao, 1, sizeof(int), arquivoIndice);
-    }
-
-    rewind(arquivoIndice);
-    fwrite("P", 1, sizeof(char), arquivoIndice); //Atualiza para Pareado ao fim da inserção
-    fclose(arquivoIndice);
 }
 
 //Pesquisa o Indice e retorna a posicao dele caso o arquivo esteja
@@ -240,7 +98,7 @@ int buscarRegistro(char codCli[],char codVei[]){
     int posicaoAtual, posicaoRegistro = NAOENCONTRADO;
     bool primeiro, segundo;
 
-    if(!verificaPareamento()){
+    if(!estarPareado()){
         fclose(arquivoBusca);
         return NAOPAREADO;
     }
@@ -314,31 +172,59 @@ void exibeRegistro(int posicao){
     fclose(arquivo);
 }
 
-void carregarArquivoInsere() {
-    FILE *arquivo = fopen("insere.bin", "rb");
-    int quantidadeRegistros = 0;
+void criarArquivoVerificarIndice(){
+    FILE *arquivo;
+    FILE *arquivoIndice;
+    char pareamento;
 
-    validarErroAbrirArquivo(arquivo);
+    if((arquivo = fopen("registro.bin", "rb"))){
+        fseek(arquivo, 0, SEEK_END);
+        int size = ftell(arquivo);
+        if (size != 0) {
+            if((arquivoIndice = fopen("indice.bin", "rb"))){
+                bool pareado = estarPareado();
 
-    while(fread(&registros[quantidadeRegistros], sizeof(struct RegistroLocacao), 1, arquivo)){
-        quantidadeRegistros++;
+                //Verifica pareamento para copiar os indices ou montar a partir dos dados
+                if(pareado){
+                    copiaDadosDoIndice();
+                }
+                else{
+                    montaArrayIndiceOrdenaArquivo();
+                }
+                fclose(arquivoIndice);
+            }
+            else{
+                montaArrayIndiceOrdenaArquivo();
+            }
+
+            fclose(arquivo);
+            return;
+        }
     }
-    fclose(arquivo);
-
-    totalRegistrosCarregados = quantidadeRegistros;
+    else{
+        arquivo = fopen("registro.bin", "w+b");
+        fclose(arquivo);
+    }
 }
 
-//TODO: Deveria guardar posição do Busca também?
-void carregarArquivoBusca() {
-    FILE *arquivo = fopen("busca_p.bin", "rb");
-    int quantidadeRegistros = 0;
+void montaArrayIndiceOrdenaArquivo(){
 
-    validarErroAbrirArquivo(arquivo);
+    FILE *arquivo = fopen("registro.bin", "rb");
+    char codVeiRegistro[8], codCliRegistro[12], tamanhoRegistro;
 
-    while(fread(&registrosBusca[quantidadeRegistros], sizeof(struct RegistroArquivoBusca), 1, arquivo)){
-        quantidadeRegistros++;
+    while(fread(&tamanhoRegistro, sizeof(char), 1, arquivo)){
+        indices[quantidadeIndices].posicao = quantidadeIndices + 1;
+        fread(&codCliRegistro, sizeof(char), 11, arquivo);
+        fseek(arquivo, 1, SEEK_CUR);
+        fread(&codVeiRegistro, sizeof(char), 7, arquivo);
+
+        strcpy(indices[quantidadeIndices].chave , codCliRegistro);
+        strcat(indices[quantidadeIndices].chave , codVeiRegistro);
+        quantidadeIndices++;
+
+        fseek(arquivo, tamanhoRegistro - 19, SEEK_CUR);
     }
-    fclose(arquivo);
+    ordenarIndices();
 }
 
 void menu(){
@@ -351,6 +237,7 @@ void menu(){
 
                 printf("Qual o registro deseja inserir?\n");
                 scanf("%d", &posicao);
+                posicao--;
 
                 if(posicao < totalRegistrosCarregados){
                     inserirRegistro(registros[posicao]);
@@ -365,6 +252,7 @@ void menu(){
 
                 printf("Qual registro deseja buscar?\n");
                 scanf("%d", &posicao);
+                posicao--;
 
                 if(posicao < totalRegistrosCarregados){
                     exibeRegistro(buscarRegistro(registrosBusca[posicao].cod_cli, registrosBusca[posicao].cod_vei));
@@ -391,6 +279,109 @@ void menu(){
         }
     }
     while(resposta != 4);
+}
+
+int imprimirMenu() {
+    int resposta;
+
+    printf("Escolha uma opção:\n");
+    printf("(1)Inserir\n(2)Buscar\n(3)Carregar Arquivos\n(4)Sair\n");
+    scanf("%d", &resposta);
+
+    return resposta;
+}
+
+void carregarArquivoInsere() {
+    FILE *arquivo = fopen("insere.bin", "rb");
+    int quantidadeRegistros = 0;
+
+    validarErroAbrirArquivo(arquivo);
+
+    while(fread(&registros[quantidadeRegistros], sizeof(struct RegistroLocacao), 1, arquivo)){
+        quantidadeRegistros++;
+    }
+    fclose(arquivo);
+
+    totalRegistrosCarregados = quantidadeRegistros;
+}
+
+void carregarArquivoBusca() {
+    FILE *arquivo = fopen("busca_p.bin", "rb");
+    int quantidadeRegistros = 0;
+
+    validarErroAbrirArquivo(arquivo);
+
+    while(fread(&registrosBusca[quantidadeRegistros], sizeof(struct RegistroArquivoBusca), 1, arquivo)){
+        quantidadeRegistros++;
+    }
+    fclose(arquivo);
+}
+
+//Cria o Arquivo de Indice inserindo os dados do vetor
+void criaIndice(){
+
+    FILE *arquivoIndice = fopen("indice.bin", "w+b");
+
+    fwrite("N", 1, sizeof(char), arquivoIndice); //Insere Não Pareado para caso ocorra alguma interrupção durante a inserção
+
+    for(int i = 0; i < quantidadeIndices; i++){
+        fwrite(indices[i].chave, 19, sizeof(char), arquivoIndice);
+        fwrite(&indices[i].posicao, 1, sizeof(int), arquivoIndice);
+    }
+
+    rewind(arquivoIndice);
+    fwrite("P", 1, sizeof(char), arquivoIndice); //Atualiza para Pareado ao fim da inserção
+    fclose(arquivoIndice);
+}
+
+void ordenarIndices(){
+    int i,j;
+    struct RegistroIndice aux;
+    bool igualAoProximoCodigoCliente = false;
+
+    //BubbleSort para ordenar as chaves
+    for(i = 0; i < quantidadeIndices; i++){
+        for(j = 0; j < quantidadeIndices -i -1; j++){
+
+            igualAoProximoCodigoCliente = (strcmp(indices[j].chave, indices[j+1].chave) > 0);
+            
+            //CodCli é a chave principal da ordenação, se ambas forem iguais, é comparado então CodVei
+            if(igualAoProximoCodigoCliente) {
+                aux = indices[j];
+                indices[j] = indices[j+1];
+                indices[j+1] = aux;
+            }
+        }
+    }
+}
+
+void copiaDadosDoIndice(){
+
+    FILE *arquivoIndice = fopen("indice.bin", "rb");
+    char chaveRegistro[19], tamanhoRegistro, pareamento;
+    quantidadeIndices = 0;
+
+    fread(&pareamento, sizeof(char), 1, arquivoIndice);
+    while(fread(&chaveRegistro, sizeof(char), 19, arquivoIndice)){
+        fread(&indices[quantidadeIndices].posicao, sizeof(int), 1, arquivoIndice);
+
+        strcpy(indices[quantidadeIndices].chave , chaveRegistro);
+        quantidadeIndices++;
+    }
+
+    fclose(arquivoIndice);
+}
+
+bool estarPareado(){
+    FILE *arquivoIndice = fopen("indice.bin", "rb");
+    char pareamento;
+    fread(&pareamento, sizeof(char), 1, arquivoIndice);
+    if(pareamento != 'P'){
+        fclose(arquivoIndice);
+        return false;
+    }
+    fclose(arquivoIndice);
+    return true;
 }
 
 void validarErroAbrirArquivo(FILE *arquivo) {
