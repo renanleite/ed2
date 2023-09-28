@@ -21,8 +21,7 @@ struct RegistroArquivoBusca { //Proveniente do arquivo Busca_p.bin
 };
 
 struct RegistroIndice {
-    char cod_cli[12];
-    char cod_vei[8];
+    char chave[19];
     int posicao;
 };
 
@@ -58,12 +57,10 @@ void ordenaArquivos(){
     for(i = 0; i < quantidadeIndices; i++){
         for(j = 0; j < quantidadeIndices -i -1; j++){
 
-            igualAoProximoCodigoCliente = (strcmp(indices[j].cod_cli, indices[j+1].cod_cli) > 0);
-            igualAoProximoCodigoClienteMaiorQueProximoCodigoVeiculo 
-                = (indices[j].cod_cli == indices[j+1].cod_cli) && (indices[j].cod_vei > indices[j+1].cod_vei);
-
+            igualAoProximoCodigoCliente = (strcmp(indices[j].chave, indices[j+1].chave) > 0);
+            
             //CodCli é a chave principal da ordenação, se ambas forem iguais, é comparado então CodVei
-            if(igualAoProximoCodigoCliente || igualAoProximoCodigoClienteMaiorQueProximoCodigoVeiculo) {
+            if(igualAoProximoCodigoCliente) {
                 aux = indices[j];
                 indices[j] = indices[j+1];
                 indices[j+1] = aux;
@@ -85,8 +82,8 @@ void copiaArrayIndice(){
         fseek(arquivoIndice, 1, SEEK_CUR);
         fread(&indices[quantidadeIndices].posicao, sizeof(int), 1, arquivoIndice);
 
-        strcpy(indices[quantidadeIndices].cod_cli , codCliRegistro);
-        strcpy(indices[quantidadeIndices].cod_vei , codVeiRegistro);
+        strcpy(indices[quantidadeIndices].chave , codCliRegistro);
+        strcat(indices[quantidadeIndices].chave , codVeiRegistro);
         quantidadeIndices++;
         fseek(arquivoIndice, 1, SEEK_CUR);
     }
@@ -113,8 +110,8 @@ void montaArrayIndice(){
         fseek(arquivo, 1, SEEK_CUR);
         fread(&codVeiRegistro, sizeof(char), 8, arquivo);
 
-        strcpy(indices[quantidadeIndices].cod_cli , codCliRegistro);
-        strcpy(indices[quantidadeIndices].cod_vei , codVeiRegistro);
+        strcpy(indices[quantidadeIndices].chave , codCliRegistro);
+        strcat(indices[quantidadeIndices].chave , codVeiRegistro);
         quantidadeIndices++;
 
         fseek(arquivo, tamanhoRegistro - 19, SEEK_CUR);
@@ -196,8 +193,8 @@ void inserirRegistro(struct RegistroLocacao registroInserir) {
 
     //Adiciona o Indice a Memória
     indices[quantidadeIndices].posicao = quantidadeIndices + 1;
-    strcpy(indices[quantidadeIndices].cod_cli, registroInserir.CodCli);
-    strcpy(indices[quantidadeIndices].cod_vei, registroInserir.CodVei);
+    strcpy(indices[quantidadeIndices].chave , registroInserir.CodCli);
+    strcat(indices[quantidadeIndices].chave , registroInserir.CodVei);
     quantidadeIndices++;
     ordenaArquivos();
 
@@ -237,8 +234,7 @@ void criaIndice(){
     fwrite("N", 1, sizeof(char), arquivoIndice); //Insere Não Pareado para caso ocorra alguma interrupção durante a inserção
 
     for(int i = 0; i < quantidadeIndices; i++){
-        fwrite(indices[i].cod_cli, 12, sizeof(char), arquivoIndice);
-        fwrite(indices[i].cod_vei, 8, sizeof(char), arquivoIndice);
+        fwrite(indices[i].chave, 19, sizeof(char), arquivoIndice);
         fwrite(" ", 1, sizeof(char), arquivoIndice);
         fwrite(&indices[i].posicao, 1, sizeof(int), arquivoIndice);
     }
