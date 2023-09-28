@@ -161,21 +161,22 @@ void criarArquivoVerificarIndice(){
 void inserirRegistro(struct RegistroLocacao registroInserir) {
     
     FILE *arquivo = fopen("registro.bin", "a+b");
-    FILE *arquivoBusca = fopen("indice.bin", "rb+");
+    FILE *arquivoBusca;
+    if((arquivoBusca = fopen("indice.bin", "rb+"))){
+        fwrite("N", 1, sizeof(char), arquivoBusca); //Indica que o Arquivo de Indices não está pareado durante a inserção
+        fclose(arquivoBusca);
+    }
+
     char tamanhoDoRegistro;
     int offset;
     int sizeCodCliCodVei = 18; 
 
-    if ((arquivo == NULL) || (arquivoBusca == NULL)) {
+    if (arquivo == NULL) {
         perror("Erro ao abrir o arquivo");
         return;
     }
 
-    fwrite("N", 1, sizeof(char), arquivoBusca); //Indica que o Arquivo de Indices não está pareado durante a inserção
-
-    tamanhoDoRegistro = sizeCodCliCodVei + strlen(registroInserir.NomeCliente) + strlen(registroInserir.NomeVeiculo) + sizeof(int);
-
-    indices[quantidadeIndices].posicao = ftell(arquivo);
+    tamanhoDoRegistro = sizeCodCliCodVei + strlen(registroInserir.NomeCliente) + strlen(registroInserir.NomeVeiculo) + sizeof(int) + 5;
 
     fwrite(&tamanhoDoRegistro, 1, sizeof(char), arquivo);
     fwrite(registroInserir.CodCli, 1, strlen(registroInserir.CodCli), arquivo);
@@ -190,13 +191,13 @@ void inserirRegistro(struct RegistroLocacao registroInserir) {
     fwrite("|", 1, sizeof(char), arquivo);
 
     //Adiciona o Indice a Memória
-    quantidadeIndices++;
+    indices[quantidadeIndices].posicao = quantidadeIndices + 1;
     strcpy(indices[quantidadeIndices].cod_cli, registroInserir.CodCli);
     strcpy(indices[quantidadeIndices].cod_vei, registroInserir.CodVei);
+    quantidadeIndices++;
     ordenaArquivos();
 
     fclose(arquivo);
-    fclose(arquivoBusca);
 
     printf("\n---Registro Inserido com sucesso---\n\n");
 }
@@ -216,7 +217,7 @@ int imprimirMenu() {
 
 //Verifica se há pareamento, nesse caso retorna true
 bool verificaPareamento(){
-    FILE *arquivoIndice = fopen("indices.bin", "rb");
+    FILE *arquivoIndice = fopen("indice.bin", "rb");
     char pareamento;
     fread(&pareamento, sizeof(char), 1, arquivoIndice);
     if(pareamento != 'P'){
@@ -369,7 +370,6 @@ void menu(){
                 scanf("%d", &posicao);
 
                 if(posicao < totalRegistrosCarregados){
-                    criaIndice();
                     inserirRegistro(registros[posicao]);
                 }
                 else{
@@ -395,6 +395,7 @@ void menu(){
                 break;
             case 4:
                 system("clear");
+                criaIndice();
                 printf("\n---Finalizando o programa!!!---\n\n");
                 break;
             default:
