@@ -30,7 +30,7 @@ struct RegistroLocacao {
     char CodVei[8];   // +1 para o caractere nulo ('\0')
     char NomeCliente[50];  // +1 para o caractere nulo ('\0')
     char NomeVeiculo[50];  // +1 para o caractere nulo ('\0')
-    char NumeroDias[4];    // sem caractere nulo (representa int)
+    int NumeroDias;
 };
 
 struct RegistroLocacao registros[100];
@@ -73,19 +73,15 @@ void ordenaArquivos(){
 void copiaArrayIndice(){
 
     FILE *arquivoIndice = fopen("indice.bin", "rb");
-    char codVeiRegistro[8], codCliRegistro[12], tamanhoRegistro, pareamento;
+    char chaveRegistro[19], tamanhoRegistro, pareamento;
     quantidadeIndices = 0;
 
     fread(&pareamento, sizeof(char), 1, arquivoIndice);
-    while(fread(&codCliRegistro, sizeof(char), 12, arquivoIndice)){
-        fread(&codVeiRegistro, sizeof(char), 8, arquivoIndice);
-        fseek(arquivoIndice, 1, SEEK_CUR);
+    while(fread(&chaveRegistro, sizeof(char), 19, arquivoIndice)){
         fread(&indices[quantidadeIndices].posicao, sizeof(int), 1, arquivoIndice);
 
-        strcpy(indices[quantidadeIndices].chave , codCliRegistro);
-        strcat(indices[quantidadeIndices].chave , codVeiRegistro);
+        strcpy(indices[quantidadeIndices].chave , chaveRegistro);
         quantidadeIndices++;
-        fseek(arquivoIndice, 1, SEEK_CUR);
     }
 
     fclose(arquivoIndice);
@@ -99,16 +95,16 @@ bool isTamanhoRegistrado(char tamanhoRegistro, FILE *arquivo) {
 //Monta indices a partir dos Dados e depois ordena
 void montaArrayIndice(){
 
-    FILE *arquivo = fopen("registo.bin", "rb");
+    FILE *arquivo = fopen("registro.bin", "rb");
     char codVeiRegistro[8], codCliRegistro[12], tamanhoRegistro;
 
     //isTamanhoRegistrado(tamanhoRegistro, arquivo);
 
     while(fread(&tamanhoRegistro, sizeof(char), 1, arquivo)){
-        indices[quantidadeIndices].posicao = ftell(arquivo);
-        fread(&codCliRegistro, sizeof(char), 12, arquivo);
+        indices[quantidadeIndices].posicao = quantidadeIndices + 1;
+        fread(&codCliRegistro, sizeof(char), 11, arquivo);
         fseek(arquivo, 1, SEEK_CUR);
-        fread(&codVeiRegistro, sizeof(char), 8, arquivo);
+        fread(&codVeiRegistro, sizeof(char), 7, arquivo);
 
         strcpy(indices[quantidadeIndices].chave , codCliRegistro);
         strcat(indices[quantidadeIndices].chave , codVeiRegistro);
@@ -139,13 +135,13 @@ void criarArquivoVerificarIndice(){
                 else{
                     montaArrayIndice();
                 }
+                fclose(arquivoIndice);
             }
             else{
                 montaArrayIndice();
             }
 
             fclose(arquivo);
-            fclose(arquivoIndice);
             return;
         }
     }
@@ -188,7 +184,7 @@ void inserirRegistro(struct RegistroLocacao registroInserir) {
     fwrite("|", 1, sizeof(char), arquivo);
     fwrite(registroInserir.NomeVeiculo, 1, strlen(registroInserir.NomeVeiculo), arquivo);
     fwrite("|", 1, sizeof(char), arquivo);
-    fwrite(registroInserir.NumeroDias, 1, sizeof (int), arquivo);
+    fwrite(&registroInserir.NumeroDias, 1, sizeof(int), arquivo);
     fwrite("|", 1, sizeof(char), arquivo);
 
     //Adiciona o Indice a Memória
@@ -235,39 +231,35 @@ void criaIndice(){
 
     for(int i = 0; i < quantidadeIndices; i++){
         fwrite(indices[i].chave, 19, sizeof(char), arquivoIndice);
-        fwrite(" ", 1, sizeof(char), arquivoIndice);
         fwrite(&indices[i].posicao, 1, sizeof(int), arquivoIndice);
     }
 
     rewind(arquivoIndice);
     fwrite("P", 1, sizeof(char), arquivoIndice); //Atualiza para Pareado ao fim da inserção
     fclose(arquivoIndice);
-
 }
 
 //Pesquisa o Indice e retorna a posicao dele caso o arquivo esteja
 int buscarRegistro(char codCli[],char codVei[]){
 
     FILE *arquivoBusca = fopen("indice.bin", "rb");
-    char codVeiRegistro[8], codCliRegistro[12], tamanhoRegistro, pareamento;
+    char codVeiRegistro[8], codCliRegistro[12];
     int posicaoAtual, posicaoRegistro = NAOENCONTRADO;
+    bool primeiro, segundo;
 
     if(!verificaPareamento()){
         fclose(arquivoBusca);
         return NAOPAREADO;
     }
     fseek(arquivoBusca, 1, SEEK_CUR); // Pula o pareamento que ja foi 
-    while(fread(&codCliRegistro, sizeof(char), 12, arquivoBusca)){
+    while(fread(&codCliRegistro, sizeof(char), 11, arquivoBusca)){
         fread(&codVeiRegistro, sizeof(char), 8, arquivoBusca);
-        fseek(arquivoBusca, 1, SEEK_CUR);
         fread(&posicaoAtual, sizeof(int), 1, arquivoBusca);
 
-        if((codVei != codVeiRegistro) && (codCli != codCliRegistro)){ 
+        primeiro = (strncmp(codVei,codVeiRegistro, 7) == 0);
+        segundo = (strncmp(codCli,codCliRegistro, 11) == 0);
 
-            fseek(arquivoBusca, 1, SEEK_CUR);
-
-        }
-        else{
+        if(primeiro && segundo) {
             posicaoRegistro = posicaoAtual;
             break;
         }
@@ -275,7 +267,6 @@ int buscarRegistro(char codCli[],char codVei[]){
 
     fclose(arquivoBusca);
     return posicaoRegistro;
-
 }
 
 //Printa o registro desejado
@@ -286,22 +277,33 @@ void exibeRegistro(int posicao){
         return;
     }
 
-    char tamanhoRegistro;
-    char caracter = 'a';
+    char caracter = 'a', tamanho;
     struct RegistroLocacao aux;
     FILE *arquivo = fopen("registro.bin", "rb");
 
-    fseek(arquivo, posicao, SEEK_SET);
-
+    for(int i=1; i<posicao; i++) {
+        fread(&tamanho, sizeof(char), 1, arquivo);
+        fseek(arquivo, tamanho, SEEK_CUR);
+    }
     //Leitura dos registros Variaveis;
+    fseek(arquivo, 1, SEEK_CUR);
+    fread(&aux.CodCli, sizeof(char), 11, arquivo);
+    aux.CodCli[11] = '\0';
+    fseek(arquivo, 1, SEEK_CUR);
+    fread(&aux.CodVei, sizeof(char), 7, arquivo);
+    aux.CodVei[7] = '\0';
+
+    fseek(arquivo, 1, SEEK_CUR);
+    strcpy(aux.NomeCliente, "");
     while(caracter != '|'){
         fread(&caracter, sizeof(char), 1, arquivo);
         if(caracter != '|'){
             strncat(aux.NomeCliente, &caracter, 1);
         }
     }
-    fseek(arquivo, 1, SEEK_CUR);
+
     caracter = 'a'; //Reiniciando caracter
+    strcpy(aux.NomeVeiculo, "");
     while(caracter != '|'){
         fread(&caracter, sizeof(char), 1, arquivo);
         if(caracter != '|'){
@@ -309,8 +311,7 @@ void exibeRegistro(int posicao){
         }
     }
 
-    fseek(arquivo, 1, SEEK_CUR);
-    fread(&aux.NumeroDias, sizeof(int), 1, arquivo);
+    fscanf(arquivo, "%d", &aux.NumeroDias);
 
     //printa o registro
     printf("\n----------------------------------------------------------------------\n");
