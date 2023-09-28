@@ -202,55 +202,7 @@ void inserirRegistro(struct RegistroLocacao registroInserir) {
     printf("\n---Registro Inserido com sucesso---\n\n");
 }
 
-void menu(){
-    int resposta, posicao;
 
-    do{
-        resposta = imprimirMenu();
-        switch (resposta) {
-            case 1:
-                system("clear");
-
-                printf("Qual o registro deseja inserir?\n");
-                scanf("%d", &posicao);
-
-                if(posicao < totalRegistrosCarregados){
-                    criaIndice();
-                    inserirRegistro(registros[posicao]);
-                }
-                else{
-                    printf("\n---Valor Inválido de registro---\n\n");
-                }
-                break;
-            case 2:
-                system("clear");
-
-                printf("Qual registro deseja buscar?\n");
-                scanf("%d", &posicao);
-
-                if(posicao < totalRegistrosCarregados){
-                    exibeRegistro(buscarRegistro(registrosBusca[posicao].cod_cli, registrosBusca[posicao].cod_vei));
-                }
-                else{
-                    printf("\n---Valor Inválido de registro---\n\n");
-                }
-                break;
-            case 3:
-                carregarArquivoInsere();
-                carregarArquivoBusca();
-                break;
-            case 4:
-                system("clear");
-                printf("\n---Finalizando o programa!!!---\n\n");
-                break;
-            default:
-                system("clear");
-
-                printf("\n---Valor Inválido---\n\n");
-        }
-    }
-    while(resposta != 4);
-}
 
 int imprimirMenu() {
     int resposta;
@@ -403,4 +355,54 @@ void carregarArquivoBusca() {
         quantidadeRegistros++;
     }
     fclose(arquivo);
+}
+
+void menu(){
+    int resposta, posicao;
+
+    do{
+        resposta = imprimirMenu();
+        switch (resposta) {
+            case 1:
+                system("clear");
+
+                printf("Qual o registro deseja inserir?\n");
+                scanf("%d", &posicao);
+
+                if(posicao < totalRegistrosCarregados){
+                    criaIndice();
+                    inserirRegistro(registros[posicao]);
+                }
+                else{
+                    printf("\n---Valor Inválido de registro---\n\n");
+                }
+                break;
+            case 2:
+                system("clear");
+
+                printf("Qual registro deseja buscar?\n");
+                scanf("%d", &posicao);
+
+                if(posicao < totalRegistrosCarregados){
+                    exibeRegistro(buscarRegistro(registrosBusca[posicao].cod_cli, registrosBusca[posicao].cod_vei));
+                }
+                else{
+                    printf("\n---Valor Inválido de registro---\n\n");
+                }
+                break;
+            case 3:
+                carregarArquivoInsere();
+                carregarArquivoBusca();
+                break;
+            case 4:
+                system("clear");
+                printf("\n---Finalizando o programa!!!---\n\n");
+                break;
+            default:
+                system("clear");
+
+                printf("\n---Valor Inválido---\n\n");
+        }
+    }
+    while(resposta != 4);
 }
