@@ -158,6 +158,13 @@ void criarArquivoVerificarIndice(){
     }
 }
 
+void validarErroAbrirArquivo(FILE *arquivo) {
+    if (arquivo == NULL) {
+        perror("Erro ao abrir o arquivo");
+        return;
+    }
+}
+
 void inserirRegistro(struct RegistroLocacao registroInserir) {
     
     FILE *arquivo = fopen("registro.bin", "a+b");
@@ -315,13 +322,6 @@ void exibeRegistro(int posicao){
     printf("\n----------------------------------------------------------------------\n");
     
     fclose(arquivo);
-}
-
-void validarErroAbrirArquivo(FILE *arquivo) {
-    if (arquivo == NULL) {
-        perror("Erro ao abrir o arquivo");
-        return;
-    }
 }
 
 void carregarArquivoInsere() {
