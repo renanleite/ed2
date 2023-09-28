@@ -97,21 +97,34 @@ int buscarRegistro(char codCli[],char codVei[]){
     int posicaoAtual, posicaoRegistro = NAOENCONTRADO;
     bool primeiro, segundo;
 
+    char chaveBusca[19];
+    strcpy(chaveBusca, codCli);
+    strcat(chaveBusca, codVei);
+
+
     if(!estarPareado()){
-        fclose(arquivoBusca);
-        return NAOPAREADO;
+        for(int i=0; i<quantidadeIndices;i++){
+            primeiro = (strncmp(chaveBusca, indices[i].chave, 18) == 0);
+            if(primeiro){
+                posicaoRegistro = indices[i].posicao;
+                break;
+            }
+        }
     }
-    fseek(arquivoBusca, 1, SEEK_CUR); // Pula o pareamento que ja foi 
-    while(fread(&codCliRegistro, sizeof(char), 11, arquivoBusca)){
-        fread(&codVeiRegistro, sizeof(char), 8, arquivoBusca);
-        fread(&posicaoAtual, sizeof(int), 1, arquivoBusca);
 
-        primeiro = (strncmp(codVei,codVeiRegistro, 7) == 0);
-        segundo = (strncmp(codCli,codCliRegistro, 11) == 0);
+    else{
+        fseek(arquivoBusca, 1, SEEK_CUR); // Pula o pareamento que ja foi 
+        while(fread(&codCliRegistro, sizeof(char), 11, arquivoBusca)){
+            fread(&codVeiRegistro, sizeof(char), 8, arquivoBusca);
+            fread(&posicaoAtual, sizeof(int), 1, arquivoBusca);
 
-        if(primeiro && segundo) {
-            posicaoRegistro = posicaoAtual;
-            break;
+            primeiro = (strncmp(codVei,codVeiRegistro, 7) == 0);
+            segundo = (strncmp(codCli,codCliRegistro, 11) == 0);
+
+            if(primeiro && segundo) {
+                posicaoRegistro = posicaoAtual;
+                break;
+            }
         }
     }
 
@@ -123,7 +136,12 @@ int buscarRegistro(char codCli[],char codVei[]){
 void exibeRegistro(int posicao){
 
     if(posicao == -1){
-        printf("\nNão foi possível encontrar o registro\n");
+        printf("\nNão foi possível encontrar o registro\n\n");
+        return;
+    }
+
+    if(posicao == -2){
+        printf("\nNão foi possível realizar a pesquisa em um indice não pareado\n\n");
         return;
     }
 
