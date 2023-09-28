@@ -207,7 +207,6 @@ void menu(){
 
     do{
         resposta = imprimirMenu();
-
         switch (resposta) {
             case 1:
                 system("clear");
@@ -237,7 +236,8 @@ void menu(){
                 }
                 break;
             case 3:
-                carregarArquivos();
+                carregarArquivoInsere();
+                carregarArquivoBusca();
                 break;
             case 4:
                 system("clear");
@@ -371,14 +371,18 @@ void exibeRegistro(int posicao){
     fclose(arquivo);
 }
 
-void carregarArquivoInsere() {
-    FILE *arquivo = fopen("insere.bin", "rb");
-    int quantidadeRegistros = 0;
-
+void validarErroAbrirArquivo(FILE *arquivo) {
     if (arquivo == NULL) {
         perror("Erro ao abrir o arquivo");
         return;
     }
+}
+
+void carregarArquivoInsere() {
+    FILE *arquivo = fopen("insere.bin", "rb");
+    int quantidadeRegistros = 0;
+
+    validarErroAbrirArquivo(arquivo);
 
     while(fread(&registros[quantidadeRegistros], sizeof(struct RegistroLocacao), 1, arquivo)){
         quantidadeRegistros++;
@@ -390,22 +394,13 @@ void carregarArquivoInsere() {
 
 //TODO: Deveria guardar posição do Busca também?
 void carregarArquivoBusca() {
-    FILE *arquivo = fopen("busca_p.bin", "rb");
+    FILE *arquivo = fopen("busca_pa.bin", "rb");
     int quantidadeRegistros = 0;
 
-    if (arquivo == NULL) {
-        perror("Erro ao abrir o arquivo");
-        return;
-    }
+    validarErroAbrirArquivo(arquivo);
 
     while(fread(&registrosBusca[quantidadeRegistros], sizeof(struct RegistroArquivoBusca), 1, arquivo)){
         quantidadeRegistros++;
     }
     fclose(arquivo);
-}
-
-// Vai abrir os arquivos e carregar todos os registros em um vetor de structs
-void carregarArquivos() {
-    carregarArquivoInsere();
-    carregarArquivoBusca();
 }
