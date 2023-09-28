@@ -12,7 +12,6 @@ void criaIndice();
 int buscarRegistro(char [],char []);
 void exibeRegistro(int);
 void ordenaArquivos();
-void carregarArquivos();
 int imprimirMenu();
 void menu();
 
@@ -346,7 +345,7 @@ void carregarArquivoInsere() {
 
 //TODO: Deveria guardar posição do Busca também?
 void carregarArquivoBusca() {
-    FILE *arquivo = fopen("busca_pa.bin", "rb");
+    FILE *arquivo = fopen("busca_p.bin", "rb");
     int quantidadeRegistros = 0;
 
     validarErroAbrirArquivo(arquivo);
