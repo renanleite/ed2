@@ -12,7 +12,7 @@ void criaIndice();
 int buscarRegistro(char [],char []);
 void exibeRegistro(int);
 void ordenaArquivos();
-void carregarArquivo();
+void carregarArquivos();
 int imprimirMenu();
 void menu();
 
@@ -129,7 +129,7 @@ void criarArquivoVerificarIndice(){
     char pareamento;
 
     if((arquivo = fopen("registro.bin", "rb"))){
-        fseek (arquivo, 0, SEEK_END);
+        fseek(arquivo, 0, SEEK_END);
         int size = ftell(arquivo);
         if (size != 0) {
             if((arquivoIndice = fopen("indice.bin", "rb"))){
@@ -190,8 +190,6 @@ void inserirRegistro(struct RegistroLocacao registroInserir) {
     fwrite(registroInserir.NumeroDias, 1, sizeof (int), arquivo);
     fwrite("|", 1, sizeof(char), arquivo);
 
-    fclose(arquivo);
-
     //Adiciona o Indice a Memória
     quantidadeIndices++;
     strcpy(indices[quantidadeIndices].cod_cli, registroInserir.CodCli);
@@ -239,7 +237,7 @@ void menu(){
                 }
                 break;
             case 3:
-                carregarArquivo();
+                carregarArquivos();
                 break;
             case 4:
                 system("clear");
@@ -373,11 +371,7 @@ void exibeRegistro(int posicao){
     fclose(arquivo);
 }
 
-
-// Vai abrir os arquivos e carregar todos os registros em um vetor de structs
-void carregarArquivo() {
-    
-    //Fazendo primeiro para Insere.bin
+void carregarArquivoInsere() {
     FILE *arquivo = fopen("insere.bin", "rb");
     int quantidadeRegistros = 0;
 
@@ -392,10 +386,12 @@ void carregarArquivo() {
     fclose(arquivo);
 
     totalRegistrosCarregados = quantidadeRegistros;
+}
 
-    //Fazendo para Busca.bin
-    arquivo = fopen("busca_p.bin", "rb");
-    quantidadeRegistros = 0;
+//TODO: Deveria guardar posição do Busca também?
+void carregarArquivoBusca() {
+    FILE *arquivo = fopen("busca_p.bin", "rb");
+    int quantidadeRegistros = 0;
 
     if (arquivo == NULL) {
         perror("Erro ao abrir o arquivo");
@@ -406,4 +402,10 @@ void carregarArquivo() {
         quantidadeRegistros++;
     }
     fclose(arquivo);
+}
+
+// Vai abrir os arquivos e carregar todos os registros em um vetor de structs
+void carregarArquivos() {
+    carregarArquivoInsere();
+    carregarArquivoBusca();
 }
