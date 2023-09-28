@@ -171,10 +171,7 @@ void inserirRegistro(struct RegistroLocacao registroInserir) {
     int offset;
     int sizeCodCliCodVei = 18; 
 
-    if (arquivo == NULL) {
-        perror("Erro ao abrir o arquivo");
-        return;
-    }
+    validarErroAbrirArquivo(arquivo);
 
     tamanhoDoRegistro = sizeCodCliCodVei + strlen(registroInserir.NomeCliente) + strlen(registroInserir.NomeVeiculo) + sizeof(int) + 5;
 
@@ -202,8 +199,6 @@ void inserirRegistro(struct RegistroLocacao registroInserir) {
     printf("\n---Registro Inserido com sucesso---\n\n");
 }
 
-
-
 int imprimirMenu() {
     int resposta;
 
@@ -213,7 +208,6 @@ int imprimirMenu() {
 
     return resposta;
 }
-
 
 //Verifica se há pareamento, nesse caso retorna true
 bool verificaPareamento(){
@@ -359,7 +353,6 @@ void carregarArquivoBusca() {
 
 void menu(){
     int resposta, posicao;
-
     do{
         resposta = imprimirMenu();
         switch (resposta) {
