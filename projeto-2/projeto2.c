@@ -13,6 +13,7 @@ int buscarRegistro(char [],char []);
 void exibeRegistro(int);
 void ordenaArquivos();
 int imprimirMenu();
+void validarErroAbrirArquivo(FILE *);
 void menu();
 
 struct RegistroArquivoBusca { //Proveniente do arquivo Busca_p.bin
@@ -51,7 +52,6 @@ void ordenaArquivos(){
     int i,j;
     struct RegistroIndice aux;
     bool igualAoProximoCodigoCliente = false;
-    bool igualAoProximoCodigoClienteMaiorQueProximoCodigoVeiculo = false;
 
     //BubbleSort para ordenar as chaves
     for(i = 0; i < quantidadeIndices; i++){
@@ -148,13 +148,6 @@ void criarArquivoVerificarIndice(){
     else{
         arquivo = fopen("registro.bin", "w+b");
         fclose(arquivo);
-    }
-}
-
-void validarErroAbrirArquivo(FILE *arquivo) {
-    if (arquivo == NULL) {
-        perror("Erro ao abrir o arquivo");
-        return;
     }
 }
 
@@ -366,6 +359,7 @@ void menu(){
                     printf("\n---Valor Inválido de registro---\n\n");
                 }
                 break;
+
             case 2:
                 system("clear");
 
@@ -379,20 +373,29 @@ void menu(){
                     printf("\n---Valor Inválido de registro---\n\n");
                 }
                 break;
+
             case 3:
                 carregarArquivoInsere();
                 carregarArquivoBusca();
                 break;
+
             case 4:
                 system("clear");
                 criaIndice();
                 printf("\n---Finalizando o programa!!!---\n\n");
                 break;
+
             default:
                 system("clear");
-
                 printf("\n---Valor Inválido---\n\n");
         }
     }
     while(resposta != 4);
+}
+
+void validarErroAbrirArquivo(FILE *arquivo) {
+    if (arquivo == NULL) {
+        perror("Erro ao abrir o arquivo");
+        return;
+    }
 }
