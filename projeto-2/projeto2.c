@@ -57,7 +57,7 @@ void ordenaArquivos(){
         for(j = 0; j < quantidadeIndices -i -1; j++){
 
             //CodCli é a chave principal da ordenação, se ambas forem iguais, é comparado então CodVei
-            if(indices[j].cod_cli > indices[j+1].cod_cli){ 
+            if(strcmp(indices[j].cod_cli, indices[j+1].cod_cli) > 0) {
                 aux = indices[j];
                 indices[j] = indices[j+1];
                 indices[j+1] = aux;
