@@ -42,7 +42,7 @@ struct RegistroLocacao registros[100];
 struct RegistroArquivoBusca registrosBusca[100];
 struct RegistroIndice indices[100];
 int totalRegistrosCarregados;
-int quantidadeIndices;
+int quantidadeIndices = 0;
 
 int main() {
     criarArquivoVerificarIndice();
@@ -59,7 +59,6 @@ void inserirRegistro(struct RegistroLocacao registroInserir) {
     }
 
     char tamanhoDoRegistro;
-    int offset;
     int sizeCodCliCodVei = 18; 
 
     validarErroAbrirArquivo(arquivo);
@@ -217,6 +216,7 @@ void montaArrayIndiceOrdenaArquivo(){
         fread(&codCliRegistro, sizeof(char), 11, arquivo);
         fseek(arquivo, 1, SEEK_CUR);
         fread(&codVeiRegistro, sizeof(char), 7, arquivo);
+        codVeiRegistro[7] = '\0';
 
         strcpy(indices[quantidadeIndices].chave , codCliRegistro);
         strcat(indices[quantidadeIndices].chave , codVeiRegistro);
@@ -320,7 +320,7 @@ void carregarArquivoBusca() {
 //Cria o Arquivo de Indice inserindo os dados do vetor
 void criaIndice(){
 
-    FILE *arquivoIndice = fopen("indice.bin", "w+b");
+    FILE *arquivoIndice = fopen("novo.bin", "w+b");
 
     fwrite("N", 1, sizeof(char), arquivoIndice); //Insere Não Pareado para caso ocorra alguma interrupção durante a inserção
 
@@ -332,6 +332,9 @@ void criaIndice(){
     rewind(arquivoIndice);
     fwrite("P", 1, sizeof(char), arquivoIndice); //Atualiza para Pareado ao fim da inserção
     fclose(arquivoIndice);
+
+    remove("indice.bin");
+    rename("novo.bin", "indice.bin");
 }
 
 void ordenarIndices(){
