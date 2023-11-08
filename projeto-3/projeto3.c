@@ -2,6 +2,22 @@
 #include <stdbool.h>
 #include <unistd.h>
 
+struct RegistroBusca {  //Proveniente do arquivo busca.bin
+    char cod_cli[12];
+    char cod_vei[8];
+};
+
+struct RegistroLocacao {
+    char CodCli[12];  // +1 para o caractere nulo ('\0')
+    char CodVei[8];   // +1 para o caractere nulo ('\0')
+    char NomeCliente[50];  // +1 para o caractere nulo ('\0')
+    char NomeVeiculo[50];  // +1 para o caractere nulo ('\0')
+    int NumeroDias;
+};
+
+struct RegistroLocacao registrosInsercao[100];  // para armazenar o arquivo insere.bin
+struct RegistroBusca registrosBusca[100];   // para armazenar o arquivo busca.bin
+
 int imprimirMenu() {
     int resposta;
 
@@ -21,6 +37,37 @@ bool existeArquivoRegistro() {
         return true;
     }
     return false;
+}
+
+void validarErroAbrirArquivo(FILE *arquivo) {
+    if (arquivo == NULL) {
+        perror("Erro ao abrir o arquivo");
+        return;
+    }
+}
+
+void carregaArquivos(){
+    //  Fazendo primeiro para 'insere.bin'
+    FILE *arquivo = fopen("insere.bin", "rb");
+    int quantidadeRegistros = 0;
+
+    validarErroAbrirArquivo(arquivo);
+
+    while(fread(&registrosInsercao[quantidadeRegistros], sizeof(struct RegistroLocacao), 1, arquivo)){
+        quantidadeRegistros++;
+    }
+    fclose(arquivo);
+
+    //  Fazendo para 'busca.bin'
+    arquivo = fopen("busca.bin", "rb");
+    quantidadeRegistros = 0;
+
+    validarErroAbrirArquivo(arquivo);
+
+    while(fread(&registrosBusca[quantidadeRegistros], sizeof(struct RegistroBusca), 1, arquivo)){
+        quantidadeRegistros++;
+    }
+    fclose(arquivo);
 }
 
 int main () {
@@ -54,6 +101,7 @@ int main () {
             case 3:
                 break;
             case 4:
+                carregaArquivos();
                 break;
             default:
                 break;
