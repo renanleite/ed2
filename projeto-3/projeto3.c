@@ -13,6 +13,7 @@ struct BTPage{
     short keycount; // number of keys in page
     char key[MAXKEYS]; // the actual keys
     short child[MAXKEYS+1]; // RRNs dos filhos
+    short rnnFile[MAXKEYS];
 };
 
 #define PAGESIZE sizeof(struct BTPage)
@@ -147,6 +148,116 @@ void inserirRegistro(FILE *registros, FILE *fileBTree) {
 
     else
         root = createTree(fileBTree);
+}
+
+
+
+
+void pesquisaChave(FILE *registros, FILE *fileBTree, char chave[]){
+
+    bool naoEncontrado = true;
+    struct BTPage tempPage;
+    int i;
+    short pagina = 0;
+
+    while(naoEncontrado){
+
+        fread(&tempPage, sizeof(PAGESIZE), 1, fileBTree);
+
+        for(i = 0; i < tempPage.keycount; i++){
+            if(chave == tempPage.key[i]){
+                printf("Chave encontrada: %s | pag: %d | pos: %d", tempPage.key[i], pagina, i);
+                naoEncontrado = false;
+                break;
+            }
+            if(chave < tempPage.key[i]){
+                if(tempPage.child[i] < 0){
+                    printf("Chave não encontrada: %s", chave);
+                    break;
+                }
+                else{
+                    fseek(fileBTree, tempPage.child[i] * sizeof(PAGESIZE), SEEK_SET);
+                    pagina = tempPage.child[i];
+                }
+            }
+            else if(chave > tempPage.key[i]){
+                if((i < (tempPage.keycount - 1)) && (chave < tempPage.key[i+1])){
+                    if(tempPage.child[i] < 0){
+                        printf("Chave não encontrada: %s", chave);
+                        break;
+                    }
+                    else{
+                        fseek(fileBTree, tempPage.child[i+1] * sizeof(PAGESIZE), SEEK_SET);
+                        pagina = tempPage.child[i+1];
+                    }
+                }
+            }
+        }
+
+    }
+
+}
+
+void listarDados(FILE *registros, FILE *fileBTree){
+
+    struct BTPage tempPage;
+    fread(&tempPage, sizeof(PAGESIZE), 1, fileBTree);
+    for(int i = 0; i < tempPage.keycount + 1; i++){
+
+        if(tempPage.child >= 0){
+            fseek(fileBTree, tempPage.child[i] * sizeof(PAGESIZE), SEEK_SET);
+            listarDados(registros, fileBTree);
+        }
+        if (i < tempPage.keycount){
+            printarDados(registros, tempPage.rnnFile[i]);
+        }
+    }
+
+}
+
+void printarDados(FILE *registros, short rnn){
+
+    rewind(registros);
+    char caracter = 'a', tamanho;
+    struct RegistroLocacao aux;
+
+    for(int i = 1; i < rnn; i++) {
+        fread(&tamanho, sizeof(char), 1, registros);
+        fseek(registros, tamanho, SEEK_CUR);
+    }
+    //Leitura dos registros Variaveis;
+    fseek(registros, 1, SEEK_CUR);
+    fread(&aux.CodCli, sizeof(char), 11, registros);
+    aux.CodCli[11] = '\0';
+    fseek(registros, 1, SEEK_CUR);
+    fread(&aux.CodVei, sizeof(char), 7, registros);
+    aux.CodVei[7] = '\0';
+
+    fseek(registros, 1, SEEK_CUR);
+    strcpy(aux.NomeCliente, "");
+    while(caracter != '|'){
+        fread(&caracter, sizeof(char), 1, registros);
+        if(caracter != '|'){
+            strncat(aux.NomeCliente, &caracter, 1);
+        }
+    }
+
+    caracter = 'a'; //Reiniciando caracter
+    strcpy(aux.NomeVeiculo, "");
+    while(caracter != '|'){
+        fread(&caracter, sizeof(char), 1, registros);
+        if(caracter != '|'){
+            strncat(aux.NomeVeiculo, &caracter, 1);
+        }
+    }
+
+    fscanf(registros, "%d", &aux.NumeroDias);
+
+    //printa o registro
+    printf("\n----------------------------------------------------------------------\n");
+    printf("%s | %s | %s | %s | %d", aux.CodCli, aux.CodVei, aux.NomeCliente, aux.NomeVeiculo, aux.NumeroDias);
+    printf("\n----------------------------------------------------------------------\n");
+
 }
 
 int main () {
