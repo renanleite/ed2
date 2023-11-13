@@ -105,6 +105,13 @@ short getRoot(FILE *fileBTree) {
     return root;
 }
 
+void putRoot(FILE *fileBTree, short root) {
+
+    fseek(fileBTree,0,SEEK_SET);
+	fwrite(&root, sizeof(short), 1, fileBTree);
+
+}
+
 short getpageRRN(FILE *fileBTree) {
     short addr;
     fseek(fileBTree, 0, SEEK_END);
@@ -112,11 +119,30 @@ short getpageRRN(FILE *fileBTree) {
     return ((short) addr / PAGESIZE);
 }
 
-void pageInit(struct BTPage *p_page) {
-    // TODO
+void btWrite(short rrn, struct BTPage *page_ptr, FILE *fileBTree) { //Insere a pagina no arquivo  
+	long addr;
+	addr = (long)rrn * (long)PAGESIZE + 2L;
+	fseek(fileBTree, addr, 0);	
+	fwrite(&(*page_ptr), PAGESIZE, 1, fileBTree);
+
+	return;
 }
 
-int createTree(FILE *fileBTree) {
+void pageInit(struct BTPage *p_page) {
+    //Inicializa a página totalmente vazia
+
+    p_page->keycount = NO;
+
+    for (int i = 0; i < MAXKEYS; i++){
+        p_page->key[i] = NOKEY;
+        p_page->child[i] = NIL;
+        p_page->rnnFile[i] = NOKEY;
+    }
+    p_page->child[MAXKEYS] = NIL;
+
+}
+
+int createTree(FILE *fileBTree, char *chave) {
     int menosum = NIL;
 
     if ((fileBTree = fopen("BTree.bin", "w+b")) == NULL) {
@@ -126,9 +152,82 @@ int createTree(FILE *fileBTree) {
 
     fseek(fileBTree, 0, SEEK_SET);
     fwrite(&menosum, sizeof(int), 1, fileBTree); // header = -1
+    fclose(fileBTree);
 
-    return 0;
-    // TODO: fazer o retorno parar criar a raiz (create_root)
+    fileBTree = fopen("BTree.bin", "w+b");
+
+    return (createRoot(chave, NIL, NIL, 0, fileBTree));
+}
+
+short create_root(char *chave, short left, short right, short rrnArquivo, FILE *fileBTree) {
+	struct BTPage page;
+
+	short rrn;
+
+	rrn = getpageRRN(fileBTree);
+	pageinit(&page);
+	strcpy(page.key[0], chave);
+	
+	page.child[0] = left;
+	page.child[1] = right;
+	page.keycount = (short)1;
+	page.rnnFile[0] = rrnArquivo;
+	
+	btwrite(rrn, &page);
+	putroot(rrn);
+
+    printf("Chave inserida com sucesso: %s", chave);
+	
+	return(rrn);
+}
+
+int buscaDuplicada(char *chave, FILE *fileBTree) { //Buscando chaves duplicadas no nó
+	int i;
+    struct BTPage tempPage;
+
+	fread(&tempPage, sizeof(PAGESIZE), 1, fileBTree);
+
+        for(i = 0; i < tempPage.keycount; i++){
+            if(chave == tempPage.key[i]){
+                return (YES);
+            }
+            if(chave < tempPage.key[i]){ //Se for menor que a chave, está no filho a esquerda
+                if(tempPage.child[i] < 0){
+                    return(NO);
+                }
+                else{
+                    fseek(fileBTree, tempPage.child[i] * sizeof(PAGESIZE), SEEK_SET);
+                    return(buscaDuplicada(chave, fileBTree));
+                }
+            }
+            else if(chave > tempPage.key[i]){ //Se for maior que a chave, ou será igual a próxima ou está no filho a direita
+
+                if(i < (tempPage.keycount - 1)){ //Verifica se existe chave a direita
+
+                    if(chave < tempPage.key[i+1]){//Se for menor que proxima chave ele busca nos filhos
+
+                        if(tempPage.child[i] < 0){
+                            return(NO);
+                        }
+                        else{
+                            fseek(fileBTree, tempPage.child[i+1] * sizeof(PAGESIZE), SEEK_SET);
+                            return(buscaDuplicada(chave, fileBTree));
+                        }
+
+                    }
+                }else {
+                    return(NO);
+                }
+            }
+        }
+	
+
+}
+
+int inserirArvore(FILE *fileBTree, char *chave, short rnnArquivo){
+
+
+
 }
 
 void inserirRegistro(FILE *registros, FILE *fileBTree) {
@@ -140,20 +239,35 @@ void inserirRegistro(FILE *registros, FILE *fileBTree) {
     posicao --; // para converter, comecando em zero
 
     // Inserindo o registro no final do arquivo principal:
+    short rnn;
     fseek(registros, 0, SEEK_END);
-    fwrite(&registrosInsercao[posicao], sizeof(struct RegistroLocacao), 1, registros);
+    rnn = ftell(registros);
+    char chave[18];
+    strcpy(chave ,registrosInsercao->CodCli[posicao]);
+    strcat(chave, registrosInsercao->CodVei[posicao]);
 
-    if(btOpen(fileBTree))
+    if(btOpen(fileBTree)){
+
         root = getRoot(fileBTree);
+        //Verificar se chave já existe na árvore
+        if (buscaDuplicada(chave, fileBTree)){
+            printf("Chave duplicada: %s", chave);
+            return;
+        }
 
-    else
-        root = createTree(fileBTree);
+        inserirArvore(fileBTree, chave, rnn);
+
+    }else{
+        //Cria nova árvore e insere
+        root = createTree(fileBTree, chave);
+    }
+
+    fwrite(&registrosInsercao[posicao], sizeof(struct RegistroLocacao), 1, registros);
+    printf("Chave inserida com sucesso: %s", chave);
 }
 
 
-
-
-void pesquisaChave(FILE *registros, FILE *fileBTree, char chave[]){
+void pesquisaChave(FILE *registros, FILE *fileBTree, char chave[]){ //Função de buscar chave específica
 
     bool naoEncontrado = true;
     struct BTPage tempPage;
@@ -170,7 +284,7 @@ void pesquisaChave(FILE *registros, FILE *fileBTree, char chave[]){
                 naoEncontrado = false;
                 break;
             }
-            if(chave < tempPage.key[i]){
+            if(chave < tempPage.key[i]){ //Se for menor que a chave, está no filho a esquerda
                 if(tempPage.child[i] < 0){
                     printf("Chave não encontrada: %s", chave);
                     break;
@@ -180,16 +294,25 @@ void pesquisaChave(FILE *registros, FILE *fileBTree, char chave[]){
                     pagina = tempPage.child[i];
                 }
             }
-            else if(chave > tempPage.key[i]){
-                if((i < (tempPage.keycount - 1)) && (chave < tempPage.key[i+1])){
-                    if(tempPage.child[i] < 0){
-                        printf("Chave não encontrada: %s", chave);
-                        break;
+            else if(chave > tempPage.key[i]){ //Se for maior que a chave, ou será igual a próxima ou está no filho a direita
+
+                if(i < (tempPage.keycount - 1)){ //Verifica se existe chave a direita
+
+                    if(chave < tempPage.key[i+1]){//Se for menor que proxima chave ele busca nos filhos
+
+                        if(tempPage.child[i] < 0){
+                            printf("Chave não encontrada: %s", chave);
+                            break;
+                        }
+                        else{
+                            fseek(fileBTree, tempPage.child[i+1] * sizeof(PAGESIZE), SEEK_SET);
+                            pagina = tempPage.child[i+1];
+                        }
+
                     }
-                    else{
-                        fseek(fileBTree, tempPage.child[i+1] * sizeof(PAGESIZE), SEEK_SET);
-                        pagina = tempPage.child[i+1];
-                    }
+                }else {
+                    printf("Chave não encontrada: %s", chave);
+                    break;
                 }
             }
         }
