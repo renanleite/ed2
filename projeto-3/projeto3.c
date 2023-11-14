@@ -2,6 +2,7 @@
 #include <stdbool.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <string.h>
 
 #define MAXKEYS 3
 #define MINKEYS MAXKEYS/2
@@ -143,6 +144,28 @@ void pageInit(struct BTPage *p_page) {
 
 }
 
+short createRoot(char *chave, short left, short right, short rrnArquivo, FILE *fileBTree) { //Cria raiz
+	struct BTPage page;
+
+	short rrn;
+
+	rrn = getpageRRN(fileBTree);
+	pageInit(&page);
+	strcpy((char *) page.key[0], chave);    // TODO verificar essa linha
+	
+	page.child[0] = left;
+	page.child[1] = right;
+	page.keycount = (short)1;
+	page.rnnFile[0] = rrnArquivo;
+	
+	btWrite(rrn, &page, fileBTree);
+	putRoot(fileBTree, rrn);
+
+    printf("Chave inserida com sucesso: %s", chave);
+	
+	return(rrn);
+}
+
 int createTree(FILE *fileBTree, char *chave) {
     int menosum = NIL;
 
@@ -158,28 +181,6 @@ int createTree(FILE *fileBTree, char *chave) {
     fileBTree = fopen("BTree.bin", "w+b");
 
     return (createRoot(chave, NIL, NIL, 0, fileBTree));
-}
-
-short create_root(char *chave, short left, short right, short rrnArquivo, FILE *fileBTree) { //Cria raiz
-	struct BTPage page;
-
-	short rrn;
-
-	rrn = getpageRRN(fileBTree);
-	pageinit(&page);
-	strcpy(page.key[0], chave);
-	
-	page.child[0] = left;
-	page.child[1] = right;
-	page.keycount = (short)1;
-	page.rnnFile[0] = rrnArquivo;
-	
-	btWrite(rrn, &page, fileBTree);
-	putroot(rrn);
-
-    printf("Chave inserida com sucesso: %s", chave);
-	
-	return(rrn);
 }
 
 int buscaDuplicada(char *chave, short *pos,FILE *fileBTree) { //Buscando chaves duplicadas no nó
@@ -275,7 +276,7 @@ void split(char *key, short r_child, struct BTPage *p_oldpage, char *promo_key, 
 	
 	workChild[i+1] = r_child;
 	*promo_r_child = getpageRRN(fileBTree);
-	pageinit(p_newpage);
+	pageInit(p_newpage);
 	
 	for (i = 0; i < MINKEYS+1; i++) {
 		strcpy (p_oldpage->key[i],workKeys[i]);
@@ -386,7 +387,7 @@ void inserirRegistro(FILE *registros, FILE *fileBTree) {
 
         promoted = inserirArvore(root, chave, &promo_rrn, promo_key, rrnArquivo, &promo_rrn_arquivo, fileBTree);		
 		if (promoted)
-			root = create_root(promo_key, root, promo_rrn, promo_rrn_arquivo, fileBTree);
+			root = createRoot(promo_key, root, promo_rrn, promo_rrn_arquivo, fileBTree);
 
     }else{
         //Cria nova árvore e insere
@@ -396,7 +397,6 @@ void inserirRegistro(FILE *registros, FILE *fileBTree) {
     fwrite(&registrosInsercao[posicao], sizeof(struct RegistroLocacao), 1, registros);
     printf("Chave inserida com sucesso: %s", chave);
 }
-
 
 void pesquisaChave(FILE *registros, FILE *fileBTree, char chave[]){ //Função de buscar chave específica
 
@@ -447,26 +447,7 @@ void pesquisaChave(FILE *registros, FILE *fileBTree, char chave[]){ //Função d
                 }
             }
         }
-
     }
-
-}
-
-void listarDados(FILE *registros, FILE *fileBTree){
-
-    struct BTPage tempPage;
-    fread(&tempPage, sizeof(PAGESIZE), 1, fileBTree);
-    for(int i = 0; i < tempPage.keycount + 1; i++){
-
-        if(tempPage.child >= 0){
-            fseek(fileBTree, tempPage.child[i] * sizeof(PAGESIZE), SEEK_SET);
-            listarDados(registros, fileBTree);
-        }
-        if (i < tempPage.keycount){
-            printarDados(registros, tempPage.rnnFile[i]);
-        }
-    }
-
 }
 
 void printarDados(FILE *registros, short rnn){
@@ -512,6 +493,22 @@ void printarDados(FILE *registros, short rnn){
     printf("%s | %s | %s | %s | %d", aux.CodCli, aux.CodVei, aux.NomeCliente, aux.NomeVeiculo, aux.NumeroDias);
     printf("\n----------------------------------------------------------------------\n");
 
+}
+
+void listarDados(FILE *registros, FILE *fileBTree){
+
+    struct BTPage tempPage;
+    fread(&tempPage, sizeof(PAGESIZE), 1, fileBTree);
+    for(int i = 0; i < tempPage.keycount + 1; i++){
+
+        if(tempPage.child >= 0){
+            fseek(fileBTree, tempPage.child[i] * sizeof(PAGESIZE), SEEK_SET);
+            listarDados(registros, fileBTree);
+        }
+        if (i < tempPage.keycount){
+            printarDados(registros, tempPage.rnnFile[i]);
+        }
+    }
 }
 
 int main () {
