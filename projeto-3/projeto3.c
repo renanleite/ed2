@@ -12,10 +12,10 @@
 #define YES 1
 
 struct BTPage{
-    short keycount; // number of keys in page
-    char key[MAXKEYS]; // the actual keys
+    short keycount; //numero de chaves na página
+    char key[MAXKEYS]; //contagem atual de chaves
     short child[MAXKEYS+1]; // RRNs dos filhos
-    short rnnFile[MAXKEYS];
+    short rnnFile[MAXKEYS]; //RRN do arquivo
 };
 
 #define PAGESIZE sizeof(struct BTPage)
@@ -88,7 +88,7 @@ void carregaArquivos(){
     fclose(arquivo);
 }
 
-// TODO: FUNCOES PARA A ARVORE, PRECISA TESTAR SE ESTA FUNCIONAL
+// TODO: PRECISA TESTAR SE ESTA FUNCIONAL
 
 bool btOpen(FILE *fileBTree) {
     if ((fileBTree = fopen("BTree.bin", "r+b")) == NULL) {
@@ -314,10 +314,9 @@ int inserirArvore (short rrn, char* chave, short *promo_r_child, char *promo_key
 	int found, promoted;
 	
 	short pos,
-	      p_b_rrn;// rrn promovido
-		   // rrn promovido no arquivo de dados
+	      p_b_rrn;//rrn promovido no arquivo de dados
 	      
-	char p_b_key[18]; // chave promovida
+	char p_b_key[18]; //chave promovida
 	
 	if (rrn == NIL) {
 		strcpy(promo_key, chave);
@@ -325,6 +324,7 @@ int inserirArvore (short rrn, char* chave, short *promo_r_child, char *promo_key
 		return(YES);
 	}
 	
+    //Busca se existe duplicata antes de inserir
 	btread(rrn, &page);
 	found = buscaDuplicada (chave, &page, &pos);
 	
@@ -332,18 +332,20 @@ int inserirArvore (short rrn, char* chave, short *promo_r_child, char *promo_key
 		printf ("Chave duplicada: %s", chave);
 		return(0);
 	}
-	
+
+    //Recursão para chaves promovidas
 	promoted = inserirArvore(page.child[pos], chave, &p_b_rrn, p_b_key, rrnArquivo, &(*promo_rrn), fileBTree);
 	if (!promoted) {
 		return(NO);
 	}
 	
+    //Verificação para inserção normal ou via Split
 	if(page.keycount < MAXKEYS) {
 		inserirPagina(p_b_key, p_b_rrn, &page, rrnArquivo, fileBTree);
 		btwrite(rrn, &page, fileBTree);
 		printf ("Chave inserida com sucesso: %s", chave);
-
 		return(NO);
+
 	} else {
 		printf("Divisao de no\n");
 		split(p_b_key, p_b_rrn, &page, promo_key, promo_r_child, &newpage, rrnArquivo, &(*promo_rrn), fileBTree);
@@ -513,7 +515,7 @@ void listarDados(FILE *registros, FILE *fileBTree){
 
 int main () {
 
-    FILE *fileRegistros, fileBTree;
+    FILE *fileRegistros, *fileBTree;
     int resposta;
 
     // Se o arquivo principal não existe, criar o arquivo para escrita:
@@ -522,6 +524,7 @@ int main () {
             printf("Erro ao criar arquivo");
             return 0;
         }
+        fclose(fileRegistros);
     }
     // Caso exista, abrir para leitura:
     else {
@@ -529,6 +532,7 @@ int main () {
             printf("Erro ao abrir arquivo");
             return 0;
         }
+        fclose(fileRegistros);
     }
 
     do {
@@ -536,11 +540,25 @@ int main () {
 
         switch (resposta) {
             case 1:
-                inserirRegistro(fileRegistros, &fileBTree);
+                fileRegistros = fopen("registros.bin","r+b");
+                btOpen(fileBTree);
+                inserirRegistro(fileRegistros, fileBTree);
+                fclose(fileRegistros);
+                fclose(fileBTree);
                 break;
             case 2:
+                fileRegistros = fopen("registros.bin","r+b");
+                btOpen(fileBTree);
+                listarDados(fileRegistros, fileBTree);
+                fclose(fileRegistros);
+                fclose(fileBTree);
                 break;
             case 3:
+                fileRegistros = fopen("registros.bin","r+b");
+                btOpen(fileBTree);
+                pesquisaChave(fileRegistros, fileBTree, &registrosBusca);
+                fclose(fileRegistros);
+                fclose(fileBTree);
                 break;
             case 4:
                 carregaArquivos();
