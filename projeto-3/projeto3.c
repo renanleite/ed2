@@ -4,6 +4,7 @@
 #include <stdlib.h>
 
 #define MAXKEYS 3
+#define MINKEYS MAXKEYS/2
 #define NIL (-1)
 #define NOKEY '@'
 #define NO 0
@@ -159,7 +160,7 @@ int createTree(FILE *fileBTree, char *chave) {
     return (createRoot(chave, NIL, NIL, 0, fileBTree));
 }
 
-short create_root(char *chave, short left, short right, short rrnArquivo, FILE *fileBTree) {
+short create_root(char *chave, short left, short right, short rrnArquivo, FILE *fileBTree) { //Cria raiz
 	struct BTPage page;
 
 	short rrn;
@@ -173,7 +174,7 @@ short create_root(char *chave, short left, short right, short rrnArquivo, FILE *
 	page.keycount = (short)1;
 	page.rnnFile[0] = rrnArquivo;
 	
-	btwrite(rrn, &page);
+	btWrite(rrn, &page, fileBTree);
 	putroot(rrn);
 
     printf("Chave inserida com sucesso: %s", chave);
@@ -181,7 +182,7 @@ short create_root(char *chave, short left, short right, short rrnArquivo, FILE *
 	return(rrn);
 }
 
-int buscaDuplicada(char *chave, FILE *fileBTree) { //Buscando chaves duplicadas no nó
+int buscaDuplicada(char *chave, short *pos,FILE *fileBTree) { //Buscando chaves duplicadas no nó
 	int i;
     struct BTPage tempPage;
 
@@ -189,15 +190,18 @@ int buscaDuplicada(char *chave, FILE *fileBTree) { //Buscando chaves duplicadas 
 
         for(i = 0; i < tempPage.keycount; i++){
             if(chave == tempPage.key[i]){
+                *pos = i;
                 return (YES);
             }
             if(chave < tempPage.key[i]){ //Se for menor que a chave, está no filho a esquerda
                 if(tempPage.child[i] < 0){
+                    *pos = i;
                     return(NO);
                 }
                 else{
                     fseek(fileBTree, tempPage.child[i] * sizeof(PAGESIZE), SEEK_SET);
-                    return(buscaDuplicada(chave, fileBTree));
+                    *pos = i;
+                    return(buscaDuplicada(chave, pos, fileBTree));
                 }
             }
             else if(chave > tempPage.key[i]){ //Se for maior que a chave, ou será igual a próxima ou está no filho a direita
@@ -207,15 +211,18 @@ int buscaDuplicada(char *chave, FILE *fileBTree) { //Buscando chaves duplicadas 
                     if(chave < tempPage.key[i+1]){//Se for menor que proxima chave ele busca nos filhos
 
                         if(tempPage.child[i] < 0){
+                            *pos = i;
                             return(NO);
                         }
                         else{
                             fseek(fileBTree, tempPage.child[i+1] * sizeof(PAGESIZE), SEEK_SET);
-                            return(buscaDuplicada(chave, fileBTree));
+                            *pos = i;
+                            return(buscaDuplicada(chave, pos, fileBTree));
                         }
 
                     }
                 }else {
+                    *pos = i;
                     return(NO);
                 }
             }
@@ -224,16 +231,139 @@ int buscaDuplicada(char *chave, FILE *fileBTree) { //Buscando chaves duplicadas 
 
 }
 
-int inserirArvore(FILE *fileBTree, char *chave, short rnnArquivo){
+void inserirPagina(char *chave, short rnn_child, struct BTPage *p_page, short rrnArquivo, FILE *fileBTree) {
+	int i;
 
+    //Ordena a pagina até encontrar a posição correta para a chave
+	for(i = p_page->keycount; (strcmp(chave, p_page->key[i-1]) < 0)  && i > 0; i--) {
+		strcpy(p_page->key[i],p_page->key[i-1]);
+		p_page->rnnFile[i] = p_page->rnnFile[i-1];
+		p_page->child[i+1] = p_page->child[i];
+	}
+	
+    //Inserindo a chave
+	p_page->keycount++;
+	strcpy(p_page->key[i], chave);
+	p_page->rnnFile[i] = rrnArquivo;
+	p_page->child[i+1] = rnn_child;
+}
 
+void split(char *key, short r_child, struct BTPage *p_oldpage, char *promo_key, short *promo_r_child, struct BTPage *p_newpage, short rrnArquivo,short *promo_rrn, FILE *fileBTree) {
+	int i;
 
+    //Declarando variáveis para manipulação dos dados
+	char workKeys[MAXKEYS+1][2];
+	short workChild[MAXKEYS+2], workRrn[MAXKEYS+1];
+	
+	for (i = 0; i < MAXKEYS; i++) {
+		strcpy(workKeys[i],p_oldpage->key[i]);
+		workChild[i] = p_oldpage->child[i];
+		workRrn[i] = p_oldpage->rnnFile[i];
+		
+	}
+	
+	workChild[i] = p_oldpage->child[i];
+	
+	for (i = MAXKEYS; (strcmp(key,workKeys[i-1]) < 0)  && i > 0; i--) {
+		strcpy(workKeys[i],workKeys[i-1]);
+		workRrn[i] = workRrn[i-1];
+		workChild[i+1] = workChild[i];
+	}
+	
+	strcpy(workKeys[i],key);
+	workRrn[i] = rrnArquivo;
+	
+	workChild[i+1] = r_child;
+	*promo_r_child = getpageRRN(fileBTree);
+	pageinit(p_newpage);
+	
+	for (i = 0; i < MINKEYS+1; i++) {
+		strcpy (p_oldpage->key[i],workKeys[i]);
+		p_oldpage->child[i] = workChild[i];
+		p_oldpage->rnnFile[i] = workRrn[i];
+		
+		if (i != MINKEYS){
+			strcpy(p_newpage->key[i],workKeys[i+2+MINKEYS]);
+			p_newpage->child[i] = workChild[i+2+MINKEYS];
+			p_newpage->rnnFile[i] = workRrn[i+2+MINKEYS];
+			
+			strcpy(p_oldpage->key[i+1+MINKEYS], NOKEY);
+			p_oldpage->child[i+2+MINKEYS] = NIL;
+			p_oldpage->rnnFile[i+1+MINKEYS] = NIL;
+		}
+		
+	}
+	
+	p_oldpage->child[MINKEYS] = workChild[MINKEYS];
+	p_newpage->child[MINKEYS] = workChild[i+1+MINKEYS];
+	
+	p_newpage->keycount = MAXKEYS - MINKEYS - 1;
+	p_oldpage->keycount = MINKEYS + 1;
+	
+	strcpy(promo_key,workKeys[MINKEYS+1]);
+	*promo_rrn = workRrn[MINKEYS+1];
+	
+    printf("Divisao de nó\n");
+	printf ("Chave promovida: %s", promo_key);
+}
+
+int inserirArvore (short rrn, char* chave, short *promo_r_child, char *promo_key, short rrnArquivo,short *promo_rrn, FILE *fileBTree) {
+	struct BTPage page, newpage; 
+	       
+	int found, promoted;
+	
+	short pos,
+	      p_b_rrn;// rrn promovido
+		   // rrn promovido no arquivo de dados
+	      
+	char p_b_key[18]; // chave promovida
+	
+	if (rrn == NIL) {
+		strcpy(promo_key, chave);
+		*promo_r_child = NIL;
+		return(YES);
+	}
+	
+	btread(rrn, &page);
+	found = buscaDuplicada (chave, &page, &pos);
+	
+	if (found) {
+		printf ("Chave duplicada: %s", chave);
+		return(0);
+	}
+	
+	promoted = inserirArvore(page.child[pos], chave, &p_b_rrn, p_b_key, rrnArquivo, &(*promo_rrn), fileBTree);
+	if (!promoted) {
+		return(NO);
+	}
+	
+	if(page.keycount < MAXKEYS) {
+		inserirPagina(p_b_key, p_b_rrn, &page, rrnArquivo, fileBTree);
+		btwrite(rrn, &page, fileBTree);
+		printf ("Chave inserida com sucesso: %s", chave);
+
+		return(NO);
+	} else {
+		printf("Divisao de no\n");
+		split(p_b_key, p_b_rrn, &page, promo_key, promo_r_child, &newpage, rrnArquivo, &(*promo_rrn), fileBTree);
+		btwrite(rrn, &page, fileBTree);
+		btwrite(*promo_r_child, &newpage, fileBTree);
+		return(YES);
+	}
 }
 
 void inserirRegistro(FILE *registros, FILE *fileBTree) {
 
     // TODO: terminar funcao inserir
-    int posicao, root;
+    int posicao, promoted;
+	
+	short root, // rrn da raiz
+	      promo_rrn,// rrn ppromovido
+		  promo_rrn_arquivo,
+		  rrnArquivo; //rrn no arquivo de dados 
+	
+	char promo_key[18], chave[18]; // chave promovida e chave a ser inserida
+
     printf("Qual registro deseja inserir?\n");
     scanf("%d", &posicao);
     posicao --; // para converter, comecando em zero
@@ -242,7 +372,6 @@ void inserirRegistro(FILE *registros, FILE *fileBTree) {
     short rnn;
     fseek(registros, 0, SEEK_END);
     rnn = ftell(registros);
-    char chave[18];
     strcpy(chave ,registrosInsercao->CodCli[posicao]);
     strcat(chave, registrosInsercao->CodVei[posicao]);
 
@@ -250,12 +379,14 @@ void inserirRegistro(FILE *registros, FILE *fileBTree) {
 
         root = getRoot(fileBTree);
         //Verificar se chave já existe na árvore
-        if (buscaDuplicada(chave, fileBTree)){
+        if (buscaDuplicada(chave, 0,fileBTree)){
             printf("Chave duplicada: %s", chave);
             return;
         }
 
-        inserirArvore(fileBTree, chave, rnn);
+        promoted = inserirArvore(root, chave, &promo_rrn, promo_key, rrnArquivo, &promo_rrn_arquivo, fileBTree);		
+		if (promoted)
+			root = create_root(promo_key, root, promo_rrn, promo_rrn_arquivo, fileBTree);
 
     }else{
         //Cria nova árvore e insere
