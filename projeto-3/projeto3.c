@@ -204,15 +204,15 @@ int buscaDuplicada(char *chave, short *pos, short rrn) { //Buscando chaves dupli
     }
         for (i = 0; i < tempPage.keycount; i++) {
             if (strncmp(chave, tempPage.key[i], 18) == 0) {
-                *pos = i;
+                *pos = rrn;
                 return (YES);
             }
             if (strncmp(chave, tempPage.key[i], 18) < 0) { //Se for menor que a chave, está no filho a esquerda
                 if (tempPage.child[i] < 0) {
-                    *pos = i;
+                    *pos = rrn;
                     return (NO);
                 } else {
-                    *pos = i;
+                    *pos = rrn;
                     return (buscaDuplicada(chave, pos, tempPage.child[i]));
                 }
             } else if (strncmp(chave, tempPage.key[i], 18) > 0) { //Se for maior que a chave, ou será igual a próxima ou está no filho a direita
@@ -221,20 +221,20 @@ int buscaDuplicada(char *chave, short *pos, short rrn) { //Buscando chaves dupli
 
                     if (strncmp(chave, tempPage.key[i+1], 18) < 0) {//Se for menor que proxima chave ele busca nos filhos
                         if (tempPage.child[i] < 0) {
-                            *pos = i+1;
+                            *pos = rrn;
                             return (NO);
                         } else {
-                            *pos = i;
+                            *pos = rrn;
                             return (buscaDuplicada(chave, pos, tempPage.child[i+1]));
                         }
                     }
                 }
                 else {
                     if (tempPage.child[i] < 0) {
-                        *pos = i;
+                        *pos = rrn;
                         return (NO);
                     } else {
-                        *pos = i;
+                        *pos = rrn;
                         return (buscaDuplicada(chave, pos, tempPage.child[i+1]));
                     }
                 }
@@ -335,7 +335,7 @@ int inserirArvore (short rrn, char* chave, short *promo_r_child, char *promo_key
 
     //Busca se existe duplicata antes de inserir
 	btread(rrn, &page);
-	found = buscaDuplicada (chave, &pos, 0);
+	found = buscaDuplicada (chave, &pos, getRoot());
 	
 	if (found) {
 		printf ("\nChave duplicada: %s\n", chave);
@@ -427,7 +427,7 @@ void pesquisaChave(char *chave, short pagina){ //Função de buscar chave espec�
 
         for (i = 0; i < tempPage.keycount; i++) {
             if(strncmp(chave, tempPage.key[i], 18) == 0){
-                printf("Chave encontrada: %s | pag: %d | pos: %d", tempPage.key[i], pagina, i);
+                printf("Chave encontrada: %s | pag: %d | pos: %d\n", tempPage.key[i], pagina, i);
                 return;
             }
             if(strncmp(chave, tempPage.key[i], 18) < 0){ //Se for menor que a chave, está no filho a esquerda
@@ -599,7 +599,7 @@ int main () {
                 fileRegistros = fopen("registros.bin","r+b");
                 fileBTree = fopen("BTree.bin","r+b");
                 btOpen();
-                printf("Qual o registro?");
+                printf("Qual o registro?\n");
                 scanf("%d", &posicao);
                 strcpy(chave ,registrosBusca[posicao-1].cod_cli);
                 strcat(chave, registrosBusca[posicao-1].cod_vei);
