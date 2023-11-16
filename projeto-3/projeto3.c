@@ -221,7 +221,7 @@ int buscaDuplicada(char *chave, short *pos, short rrn) { //Buscando chaves dupli
 
                     if (strncmp(chave, tempPage.key[i+1], 18) < 0) {//Se for menor que proxima chave ele busca nos filhos
                         if (tempPage.child[i] < 0) {
-                            *pos = i;
+                            *pos = i+1;
                             return (NO);
                         } else {
                             *pos = i;
@@ -274,7 +274,7 @@ void split(char *key, short r_child, struct BTPage *p_oldpage, char *promo_key, 
 	
 	workChild[i] = p_oldpage->child[i];
 	
-	for (i = MAXKEYS; (strcmp(key,workKeys[i-1]) < 0)  && i > 0; i--) { // TODO: rever comparacao
+	for (i = MAXKEYS; (strcmp(key,workKeys[i-1]) < 0)  && i > 0; i--) {
 		strcpy(workKeys[i],workKeys[i-1]);
 		workRrn[i] = workRrn[i-1];
 		workChild[i+1] = workChild[i];
@@ -287,19 +287,19 @@ void split(char *key, short r_child, struct BTPage *p_oldpage, char *promo_key, 
 	*promo_r_child = getpageRRN();
 	pageInit(p_newpage);
 	
-	for (i = 0; i < MINKEYS+1; i++) {
+	for (i = 0; i < MINKEYS + 1; i++) {
 		strcpy (&p_oldpage->key[i],workKeys[i]);
 		p_oldpage->child[i] = workChild[i];
 		p_oldpage->rrnFile[i] = workRrn[i];
-		
+
 		if (i != MINKEYS){
-			strcpy(&p_newpage->key[i],workKeys[i+2+MINKEYS]);
-			p_newpage->child[i] = workChild[i+2+MINKEYS];
-			p_newpage->rrnFile[i] = workRrn[i+2+MINKEYS];
+			strcpy(&p_newpage->key[i],workKeys[i+3]);
+			p_newpage->child[i] = workChild[i+3];
+			p_newpage->rrnFile[i] = workRrn[i+3];
 			
-			strcpy(&p_oldpage->key[i+1+MINKEYS], "@");
-			p_oldpage->child[i+2+MINKEYS] = NIL;
-			p_oldpage->rrnFile[i+1+MINKEYS] = NIL;
+			strcpy(&p_oldpage->key[i+2], "@");
+			p_oldpage->child[i+3] = NIL;
+			p_oldpage->rrnFile[i+2] = NIL;
 		}
 	}
 	
@@ -365,7 +365,6 @@ int inserirArvore (short rrn, char* chave, short *promo_r_child, char *promo_key
 
 void inserirRegistro(FILE *registros) {
 
-    // TODO: terminar funcao inserir
     int posicao, promoted;
 	
 	short root, // rrn da raiz
