@@ -195,51 +195,23 @@ int createTree(char *chave) {
     return (createRoot(chave, NIL, NIL, 0));
 }
 
-int buscaDuplicada(char *chave, short *pos, short rrn) { //Buscando chaves duplicadas no nó
-	int i;
-    struct BTPage tempPage;
-    btread(rrn, &tempPage);
-    if(tempPage.keycount > MAXKEYS){
-        return (NO);
-    }
-        for (i = 0; i < tempPage.keycount; i++) {
-            if (strncmp(chave, tempPage.key[i], 18) == 0) {
-                *pos = rrn;
-                return (YES);
-            }
-            if (strncmp(chave, tempPage.key[i], 18) < 0) { //Se for menor que a chave, está no filho a esquerda
-                if (tempPage.child[i] < 0) {
-                    *pos = rrn;
-                    return (NO);
-                } else {
-                    *pos = rrn;
-                    return (buscaDuplicada(chave, pos, tempPage.child[i]));
-                }
-            } else if (strncmp(chave, tempPage.key[i], 18) > 0) { //Se for maior que a chave, ou será igual a próxima ou está no filho a direita
+bool search_node(char *key, struct BTPage *page_ptr, short *pos) {
+    int i;
 
-                if (tempPage.key[i+1][0] != '@') { //Verifica se existe chave a direita
-
-                    if (strncmp(chave, tempPage.key[i+1], 18) < 0) {//Se for menor que proxima chave ele busca nos filhos
-                        if (tempPage.child[i] < 0) {
-                            *pos = rrn;
-                            return (NO);
-                        } else {
-                            *pos = rrn;
-                            return (buscaDuplicada(chave, pos, tempPage.child[i+1]));
-                        }
-                    }
-                }
-                else {
-                    if (tempPage.child[i] < 0) {
-                        *pos = rrn;
-                        return (NO);
-                    } else {
-                        *pos = rrn;
-                        return (buscaDuplicada(chave, pos, tempPage.child[i+1]));
-                    }
-                }
-            }
+    for(i=0; i < page_ptr->keycount; i++) {
+        if(strcmp(page_ptr->key[i], key) > 0) {
+            *pos = i;
+            return false;
         }
+        else if(strcmp(page_ptr->key[i], key) == 0) {
+                *pos = i;
+                return true;
+        }
+    }
+
+    *pos = i;
+
+    return false;
 }
 
 void inserirPagina(char *chave, short rnn_child, struct BTPage *p_page, short rrnArquivo) {
@@ -321,7 +293,7 @@ int inserirArvore (short rrn, char* chave, short *promo_r_child, char *promo_key
 	       
 	int found, promoted;
 	
-	short pos,
+	short pos = 0,
 	      p_b_rrn;//rrn promovido no arquivo de dados
 	      
 	char p_b_key[19]; //chave promovida
@@ -335,7 +307,7 @@ int inserirArvore (short rrn, char* chave, short *promo_r_child, char *promo_key
 
     //Busca se existe duplicata antes de inserir
 	btread(rrn, &page);
-	found = buscaDuplicada (chave, &pos, getRoot());
+	found = search_node(chave, &page, &pos);
 	
 	if (found) {
 		printf ("\nChave duplicada: %s\n", chave);
@@ -350,7 +322,13 @@ int inserirArvore (short rrn, char* chave, short *promo_r_child, char *promo_key
 	
     //Verificação para inserção normal ou via Split
 	if(page.keycount < MAXKEYS) {
-		inserirPagina(p_b_key, p_b_rrn, &page, rrnArquivo);
+        if(promo_rrn < 0){
+            inserirPagina(p_b_key, p_b_rrn, &page, *promo_rrn);
+        }
+        else{
+            inserirPagina(p_b_key, p_b_rrn, &page, rrnArquivo);
+        }
+
         btWrite(rrn, &page);
 		return(NO);
 
@@ -369,7 +347,7 @@ void inserirRegistro(FILE *registros) {
 	
 	short root, // rrn da raiz
 	      promo_rrn,// rrn ppromovido
-		  promo_rrn_arquivo,
+		  promo_rrn_arquivo = -1,
 		  rrnArquivo; //rrn no arquivo de dados 
 	
 	char promo_key[19], chave[19]; // chave promovida e chave a ser inserida
@@ -388,10 +366,6 @@ void inserirRegistro(FILE *registros) {
         short pos = 0;
         root = getRoot();
         //Verificar se chave já existe na árvore
-        if (buscaDuplicada(chave, &pos, root)){
-            printf("\nChave duplicada: %s\n", chave);
-            return;
-        }
 
         promoted = inserirArvore(root, chave, &promo_rrn, promo_key, rrnArquivo, &promo_rrn_arquivo);
 		if (promoted)
@@ -535,6 +509,27 @@ void listarDados(short rrn){
     }
 }
 
+void listarArvore(short rrn){
+
+    struct BTPage tempPage;
+
+    btread(rrn, &tempPage);
+
+    for(int i = 0; i < tempPage.keycount ; i++){
+
+        if(tempPage.child[i] >= 0){
+            listarArvore(tempPage.child[i]);
+        }
+        printf("\n%s\n", tempPage.key[i]);
+
+        if(i == (tempPage.keycount-1)) {
+            if(tempPage.child[i+1] >= 0){
+                listarArvore(tempPage.child[i+1]);
+            }
+        }
+    }
+}
+
 int main () {
     int resposta, posicao;
     short menosUm = -1, rrn;
@@ -592,6 +587,8 @@ int main () {
                 btOpen();
                 rrn = getRoot();
                 listarDados(rrn);
+                printf("\n\n\n\n Printando chaves da arvore\n\n\n");
+                listarArvore(rrn);
                 fclose(fileRegistros);
                 fclose(fileBTree);
                 break;
